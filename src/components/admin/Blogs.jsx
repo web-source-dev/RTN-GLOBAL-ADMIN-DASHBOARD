@@ -105,7 +105,7 @@ const Blogs = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/blog/create')}
+          onClick={() => navigate('/admin/blog/create')}
           sx={{ borderRadius: 2 }}
         >
           Create Blog
@@ -187,13 +187,13 @@ const Blogs = () => {
                 <TableCell align="right">
                   <IconButton 
                     color="info"
-                    onClick={() => navigate(`/blog/post/${blog._id}`)}
+                    onClick={() => window.open(`${process.env.REACT_APP_FRONTEND_URL}/blog/post/${blog._id}`, '_blank')}
                   >
                     <ViewIcon />
                   </IconButton>
                   <IconButton 
                     color="primary"
-                    onClick={() => navigate(`/blog/edit/${blog._id}`)}
+                    onClick={() => navigate(`/admin/blog/edit/${blog._id}`)}
                   >
                     <EditIcon />
                   </IconButton>

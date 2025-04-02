@@ -11,20 +11,22 @@ import {
   Button,
   Menu,
   MenuItem,
+  Divider,
+  Chip,
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
   Mail as MailIcon,
   ExitToApp as LogoutIcon,
+  Person as PersonIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
-import API from '../../BackendAPi/ApiProvider';
 import { useNavigate } from 'react-router-dom';
-
+import NotificationComponent from '../notifications/NotificationComponent';
 const Header = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout ,isAuthenticated} = useAuth();
   const [anchorEl, setAnchorEl] = React.useState(null);
 
   const handleMenuOpen = (event) => {
@@ -34,21 +36,18 @@ const Header = () => {
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
-
   const handleLogout = async () => {
     try {
-      await API.post('/api/auth/logout');
-      // Clear any remaining user data in localStorage
-      localStorage.removeItem('user');
-      // Use the auth context to update the app state
-      if (logout) logout();
-      // Redirect to login page
-      navigate('/auth/login');
+     await logout();
+     window.location.href = `${process.env.REACT_APP_FRONTEND_URL}/auth/login`;
     } catch (error) {
       console.error('Logout failed:', error);
     }
-    handleMenuClose();
   };
+  const handleProfile = () => {
+    navigate('/admin/profile');
+  };
+
 
   return (
     <AppBar
@@ -63,32 +62,17 @@ const Header = () => {
       <Toolbar>
         <Box sx={{ flexGrow: 1 }} />
         <IconButton size="large" color="inherit">
-          <Badge badgeContent={4} color="error">
-            <MailIcon />
-          </Badge>
-        </IconButton>
-        <IconButton size="large" color="inherit">
-          <Badge badgeContent={7} color="error">
-            <NotificationsIcon />
-          </Badge>
+          <NotificationComponent />
         </IconButton>
         <Box 
           sx={{ ml: 2, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
           onClick={handleMenuOpen}
         >
           <Avatar
-            src={user?.avatar}
+            src={user?.avatar ? `${process.env.REACT_APP_API_URL}${user.avatar}` : undefined}
             alt={user?.firstName}
             sx={{ width: 40, height: 40 }}
           />
-          <Box sx={{ ml: 1 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {user?.firstName} {user?.lastName}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Administrator
-            </Typography>
-          </Box>
         </Box>
         <Menu
           anchorEl={anchorEl}
@@ -103,6 +87,24 @@ const Header = () => {
             horizontal: 'right',
           }}
         >
+
+          <MenuItem>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              {user?.firstName} {user?.lastName}
+            </Typography>
+            <Chip label="Admin" size="small" sx={{ ml: 1 }} />
+          </MenuItem>
+          <MenuItem>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              {user?.email}
+            </Typography>
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={handleProfile}>
+            <PersonIcon sx={{ mr: 1 }} />
+            Profile
+          </MenuItem>
+          <Divider />
           <MenuItem onClick={handleLogout}>
             <LogoutIcon sx={{ mr: 1 }} />
             Logout

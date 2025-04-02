@@ -11,9 +11,12 @@ import {
   Alert,
   IconButton,
   CircularProgress,
-  useTheme
+  useTheme,
+  Divider,
+  Fade,
+  Chip
 } from '@mui/material';
-import { PhotoCamera, Close } from '@mui/icons-material';
+import { PhotoCamera, Close, ArrowBack, Article, Description } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import API from '../../BackendAPi/ApiProvider';
@@ -102,7 +105,7 @@ const CreateBlog = () => {
         });
       }
   
-      navigate('/blog/manage');
+      navigate('/admin/blog/manage');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save blog');
     } finally {
@@ -137,197 +140,384 @@ const CreateBlog = () => {
     'color',
     'background',
   ];
+  
   if (initialLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="70vh">
+        <CircularProgress size={60} thickness={4} />
       </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 4,
-          background: theme.palette.background.paper,
-          borderRadius: theme.shape.borderRadius,
-        }}
-      >
-        <Typography 
-          variant="h4" 
-          gutterBottom
+    <Fade in={true} timeout={800}>
+      <Container maxWidth="xl" sx={{ py: 5 }}>
+        <Button
+          variant="text"
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/admin/blog/manage')}
           sx={{
-            color: theme.palette.primary.main,
-            fontWeight: 600,
-            mb: 3
+            mb: 3,
+            fontWeight: 500,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              color: theme.palette.primary.main,
+              backgroundColor: 'transparent',
+              transform: 'translateX(-4px)',
+              transition: 'all 0.3s ease-in-out'
+            },
           }}
         >
-          {id ? 'Edit Blog Post' : 'Create New Blog Post'}
-        </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <Stack spacing={4}>
-            <TextField
-              label="Blog Title"
-              variant="outlined"
-              fullWidth
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+          Back to Blogs
+        </Button>
+        
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: { xs: 3, md: 5 },
+            borderRadius: '16px',
+            background: theme.palette.background.paper,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.05)',
+            border: `1px solid ${theme.palette.divider}`,
+            overflow: 'hidden',
+          }}
+        >
+          <Box 
+            sx={{ 
+              mb: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            <Box
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: theme.palette.primary.main,
-                  },
-                },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 50,
+                height: 50,
+                borderRadius: '12px',
+                background: `linear-gradient(135deg, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
+                boxShadow: `0 4px 12px ${theme.palette.primary.main}40`,
               }}
-            />
-
-            <TextField
-              label="Short Description"
-              variant="outlined"
-              fullWidth
-              required
-              multiline
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: theme.palette.primary.main,
-                  },
-                },
-              }}
-            />
-
+            >
+              <Article sx={{ color: '#fff', fontSize: 28 }} />
+            </Box>
             <Box>
               <Typography 
-                variant="subtitle1" 
-                gutterBottom
-                sx={{ 
+                variant="h4" 
+                sx={{
                   color: theme.palette.text.primary,
-                  fontWeight: 500,
-                  mb: 2
+                  fontWeight: 700,
+                  fontSize: { xs: '1.75rem', md: '2.125rem' },
                 }}
               >
-                Content
+                {id ? 'Edit Blog Post' : 'Create New Blog Post'}
               </Typography>
-              <ReactQuill
-                value={content}
-                onChange={setContent}
-                modules={modules}
-                formats={formats}
-                style={{ 
-                  height: '400px', 
-                  marginBottom: '50px',
-                  backgroundColor: theme.palette.background.default,
+              <Typography 
+                variant="body1" 
+                sx={{
+                  color: theme.palette.text.secondary,
+                  mt: 0.5,
                 }}
-              />
+              >
+                {id ? 'Update your existing post with new content' : 'Share your thoughts and insights with the world'}
+              </Typography>
             </Box>
+          </Box>
 
-            <Box>
-              <input
-                accept="image/*"
-                type="file"
-                id="image-upload"
-                hidden
-                onChange={handleImageChange}
-              />
-              <label htmlFor="image-upload">
-                <Button
-                  variant="outlined"
-                  component="span"
-                  startIcon={<PhotoCamera />}
-                  sx={{
-                    borderColor: theme.palette.primary.main,
-                    color: theme.palette.primary.main,
-                    '&:hover': {
-                      backgroundColor: theme.palette.primary.light,
-                      borderColor: theme.palette.primary.main,
-                    },
+          <Divider sx={{ mb: 4 }} />
+
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 4,
+                borderRadius: '8px',
+                '& .MuiAlert-icon': {
+                  alignItems: 'center'
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <Stack spacing={4}>
+              <Box>
+                <Typography 
+                  variant="subtitle1" 
+                  sx={{ 
+                    mb: 1.5,
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
                   }}
                 >
-                  {preview ? 'Change Image' : 'Upload Image'}
-                </Button>
-              </label>
-
-              {preview && (
-                <Box sx={{ mt: 2, position: 'relative', display: 'inline-block' }}>
-                  <img
-                    src={preview}
-                    alt="Preview"
-                    style={{ 
-                      maxWidth: '300px', 
-                      maxHeight: '300px',
-                      borderRadius: theme.shape.borderRadius,
-                      boxShadow: theme.shadows[2],
-                    }}
-                  />
-                  <IconButton
-                    sx={{
-                      position: 'absolute',
-                      top: -10,
-                      right: -10,
-                      backgroundColor: theme.palette.background.paper,
-                      boxShadow: theme.shadows[2],
-                      '&:hover': {
-                        backgroundColor: theme.palette.error.light,
+                  <Description fontSize="small" />
+                  Blog Details
+                </Typography>
+                <TextField
+                  label="Blog Title"
+                  variant="outlined"
+                  fullWidth
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  sx={{
+                    mb: 3,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '10px',
+                      '&:hover fieldset': {
+                        borderColor: theme.palette.primary.main,
                       },
-                    }}
-                    size="small"
-                    onClick={removeImage}
-                  >
-                    <Close />
-                  </IconButton>
-                </Box>
-              )}
-            </Box>
+                      '&.Mui-focused fieldset': {
+                        borderWidth: '1px',
+                      },
+                    },
+                    '& .MuiInputLabel-outlined': {
+                      '&.Mui-focused': {
+                        color: theme.palette.primary.main,
+                      },
+                    },
+                  }}
+                />
 
-            <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                disabled={loading}
-                sx={{
-                  minWidth: 120,
-                  height: 45,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                }}
-              >
-                {loading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  id ? 'Update' : 'Publish'
+                <TextField
+                  label="Short Description"
+                  variant="outlined"
+                  fullWidth
+                  required
+                  multiline
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '10px',
+                      '&:hover fieldset': {
+                        borderColor: theme.palette.primary.main,
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderWidth: '1px',
+                      },
+                    },
+                    '& .MuiInputLabel-outlined': {
+                      '&.Mui-focused': {
+                        color: theme.palette.primary.main,
+                      },
+                    },
+                  }}
+                />
+              </Box>
+
+              <Box>
+                <Typography 
+                  variant="subtitle1" 
+                  sx={{ 
+                    mb: 1.5,
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    display: 'flex', 
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  <Article fontSize="small" />
+                  Content
+                </Typography>
+                <Box 
+                  sx={{
+                    '.ql-toolbar': {
+                      borderTopLeftRadius: '10px',
+                      borderTopRightRadius: '10px',
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                      borderColor: theme.palette.divider,
+                    },
+                    '.ql-container': {
+                      borderBottomLeftRadius: '10px',
+                      borderBottomRightRadius: '10px',
+                      borderColor: theme.palette.divider,
+                      minHeight: '350px',
+                      fontSize: '1rem',
+                    },
+                    '.ql-editor': {
+                      minHeight: '350px',
+                    }
+                  }}
+                >
+                  <ReactQuill
+                    value={content}
+                    onChange={setContent}
+                    modules={modules}
+                    formats={formats}
+                  />
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography 
+                  variant="subtitle1" 
+                  sx={{ 
+                    mb: 2,
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}
+                >
+                  <PhotoCamera fontSize="small" />
+                  Featured Image
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <input
+                    accept="image/*"
+                    type="file"
+                    id="image-upload"
+                    hidden
+                    onChange={handleImageChange}
+                  />
+                  <label htmlFor="image-upload">
+                    <Button
+                      variant="contained"
+                      component="span"
+                      startIcon={<PhotoCamera />}
+                      sx={{
+                        backgroundColor: preview ? theme.palette.primary.main : 'transparent',
+                        color: preview ? '#fff' : theme.palette.primary.main,
+                        border: preview ? 'none' : `1px solid ${theme.palette.primary.main}`,
+                        borderRadius: '10px',
+                        px: 3,
+                        py: 1.2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        boxShadow: preview ? theme.shadows[2] : 'none',
+                        '&:hover': {
+                          backgroundColor: preview ? theme.palette.primary.dark : 'rgba(0, 0, 0, 0.04)',
+                        }
+                      }}
+                    >
+                      {preview ? 'Change Image' : 'Upload Image'}
+                    </Button>
+                  </label>
+                  {!preview && (
+                    <Typography variant="caption" color="text.secondary">
+                      Recommended size: 1200 x 630 pixels (Max: 5MB)
+                    </Typography>
+                  )}
+                </Box>
+
+                {preview && (
+                  <Box sx={{ mt: 3, position: 'relative', display: 'inline-block' }}>
+                    <Paper
+                      elevation={3}
+                      sx={{
+                        p: 1,
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        backgroundColor: theme.palette.background.default,
+                      }}
+                    >
+                      <img
+                        src={preview}
+                        alt="Preview"
+                        style={{ 
+                          maxWidth: '100%', 
+                          height: 'auto',
+                          maxHeight: '300px',
+                          borderRadius: '8px',
+                          display: 'block',
+                        }}
+                      />
+                    </Paper>
+                    <IconButton
+                      sx={{
+                        position: 'absolute',
+                        top: -12,
+                        right: -12,
+                        backgroundColor: theme.palette.error.main,
+                        color: '#fff',
+                        boxShadow: theme.shadows[2],
+                        '&:hover': {
+                          backgroundColor: theme.palette.error.dark,
+                        },
+                        border: `2px solid ${theme.palette.background.paper}`,
+                      }}
+                      size="small"
+                      onClick={removeImage}
+                    >
+                      <Close fontSize="small" />
+                    </IconButton>
+                    <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
+                      <Chip 
+                        label="Featured Image" 
+                        size="small" 
+                        color="primary" 
+                        sx={{ borderRadius: '8px' }}
+                      />
+                    </Box>
+                  </Box>
                 )}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => navigate('/blog/manage')}
-                sx={{
-                  minWidth: 120,
-                  height: 45,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                }}
-              >
-                Cancel
-              </Button>
-            </Box>
-          </Stack>
-        </form>
-      </Paper>
-    </Container>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/admin/blog/manage')}
+                  sx={{
+                    borderRadius: '10px',
+                    px: 3,
+                    py: 1.2,
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    borderColor: theme.palette.divider,
+                    color: theme.palette.text.secondary,
+                    '&:hover': {
+                      borderColor: theme.palette.text.secondary,
+                      backgroundColor: 'transparent',
+                    }
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={loading}
+                  sx={{
+                    borderRadius: '10px',
+                    px: 4,
+                    py: 1.2,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                    boxShadow: `0 4px 12px ${theme.palette.primary.main}40`,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      boxShadow: `0 6px 16px ${theme.palette.primary.main}60`,
+                      transform: 'translateY(-2px)',
+                    }
+                  }}
+                >
+                  {loading ? (
+                    <CircularProgress size={24} color="inherit" thickness={4} />
+                  ) : (
+                    id ? 'Update Post' : 'Publish Post'
+                  )}
+                </Button>
+              </Box>
+            </Stack>
+          </form>
+        </Paper>
+      </Container>
+    </Fade>
   );
 };
 

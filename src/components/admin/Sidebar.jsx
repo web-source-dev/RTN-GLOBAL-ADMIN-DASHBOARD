@@ -25,13 +25,12 @@ import { Link, useLocation } from 'react-router-dom';
 const menuItems = [
   { text: 'Overview', icon: DashboardIcon, path: '/admin' },
   { text: 'Users', icon: PeopleIcon, path: '/admin/users' },
-  { text: 'Blogs', icon: ArticleIcon, path: '/admin/blogs' },
+  { text: 'Blogs', icon: ArticleIcon, path: '/admin/blog/manage' },
   { text: 'Job Applications', icon: WorkIcon, path: '/admin/jobs' },
   { text: 'Newsletter', icon: MailIcon, path: '/admin/newsletter' },
   { text: 'Live Chat', icon: ChatIcon, path: '/admin/chat' },
   { text: 'Support Tickets', icon: SupportIcon, path: '/admin/support' },
   { text: 'Consultation Request', icon: SupportIcon, path: '/admin/consultation' },
-  { text: 'Settings', icon: SettingsIcon, path: '/admin/settings' },
 
 ];
 

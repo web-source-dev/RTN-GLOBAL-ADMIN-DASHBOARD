@@ -15,7 +15,7 @@ import AdminSupport from './components/admin/Support';
 import ManageConsultation from './components/admin/ManageConsultation';
 import CreateBlog from './components/blog/CreateBlog';
 import ManageBlog from './components/blog/ManageBlog';
-
+import UserProfile from './components/profile/UserProfile';
 const App = () => {
   return (
     <AuthProvider>
@@ -23,23 +23,9 @@ const App = () => {
       <CssBaseline />
       <Router>
         <Routes>
-        <Route path="/blog/create" element={
-                    <ProtectedRoute adminOnly>
-                      <CreateBlog />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/blog/edit/:id" element={
-                    <ProtectedRoute adminOnly>
-                      <CreateBlog />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/blog/manage" element={
-                    <ProtectedRoute adminOnly>
-                      <ManageBlog />
-                    </ProtectedRoute>
-                  } />
+        
             <Route
-              path="/admin/*"
+              path="/*"
               element={
                 <ProtectedRoute adminOnly>
                   <AdminDashboard />
@@ -54,6 +40,22 @@ const App = () => {
               <Route path="chat" element={<ChatDashboard />} />
               <Route path="support" element={<AdminSupport />} />
               <Route path="consultation" element={<ManageConsultation />} />
+              <Route path="profile" element={<UserProfile />} />
+              <Route path="blog/create" element={
+                    <ProtectedRoute adminOnly>
+                      <CreateBlog />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="blog/edit/:id" element={
+                    <ProtectedRoute adminOnly>
+                      <CreateBlog />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="blog/manage" element={
+                    <ProtectedRoute adminOnly>
+                      <ManageBlog />
+                    </ProtectedRoute>
+                  } />
             </Route>
         </Routes>
       </Router>
