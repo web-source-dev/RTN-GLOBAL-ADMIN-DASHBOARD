@@ -1,3 +1,33 @@
 # https://www.robotstxt.org/robotstxt.html
+# Allow crawling of all content by default
 User-agent: *
-Disallow:
+Allow: /
+
+# Block private or sensitive areas
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /user/
+Disallow: /verify-invoice/
+Disallow: /verify-receipt/
+Disallow: /payment/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /error/
+Disallow: /*?*  # Block crawling of all URL parameters
+
+# Allow Googlebot to access specific URLs that might be blocked for others
+User-agent: Googlebot
+Allow: /
+
+# Allow Google Images to access media
+User-agent: Googlebot-Image
+Allow: /images/
+Allow: /assets/
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /*.webp$
+Allow: /*.svg$
+
+# Sitemap location
+Sitemap: https://rtnglobal.site/sitemap.xml
