@@ -7,9 +7,9 @@
 const MIN_LENGTHS = {
   title: 30, // Min 30 chars for title
   description: 120, // Min 120 chars for description
-  content: 300, // Min 300 chars for content
+  content: 1000, // Min 300 chars for content
   paragraphs: 40, // Min 40 chars per paragraph
-  maxParagraph: 300, // Max length recommendation
+  maxParagraph: 1000, // Max length recommendation
 };
 
 // Maximum ideal lengths for SEO fields
@@ -172,10 +172,10 @@ export const analyzeContent = (content, keywords = []) => {
   // Check content length
   if (length < MIN_LENGTHS.content) {
     feedback.push(`Content is too short (${length} chars). Search engines prefer longer, substantive content.`);
-  } else if (length > 300 && length < 1500) {
-    feedback.push(`Content length is acceptable (${length} chars), but aim for 1500+ for better SEO.`);
+  } else if (length > 1000 && length < 3000) {
+    feedback.push(`Content length is acceptable (${length} chars), but aim for 3000+ for better SEO.`);
     score += WEIGHTS.content * 0.5;
-  } else if (length >= 1500) {
+  } else if (length >= 3000) {
     feedback.push(`Content length is good (${length} chars).`);
     score += WEIGHTS.content * 0.7;
   }

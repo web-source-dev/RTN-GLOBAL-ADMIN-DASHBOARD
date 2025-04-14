@@ -228,7 +228,148 @@ const CreateBlog = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [seoTabBadge, setSeoTabBadge] = useState(0);
-  
+    // Add state to track if fields were manually edited
+    const [seoTitleManuallySet, setSeoTitleManuallySet] = useState(false);
+    const [ogTitleManuallySet, setOgTitleManuallySet] = useState(false);
+    const [twitterTitleManuallySet, setTwitterTitleManuallySet] = useState(false);
+    const [seoDescriptionManuallySet, setSeoDescriptionManuallySet] = useState(false);
+    const [ogDescriptionManuallySet, setOgDescriptionManuallySet] = useState(false);
+    const [twitterDescriptionManuallySet, setTwitterDescriptionManuallySet] = useState(false);
+    const [ogImageManuallySet, setOgImageManuallySet] = useState(false);
+    const [twitterImageManuallySet, setTwitterImageManuallySet] = useState(false);
+    const [canonicalUrlManuallySet, setCanonicalUrlManuallySet] = useState(false);
+  // Auto-populate related fields
+  useEffect(() => {
+    // Only auto-populate if the fields haven't been manually set yet
+    if (title) {
+      // If SEO title hasn't been manually edited yet, update it
+      if (!seoTitleManuallySet) {
+        setSeoTitle(title);
+      }
+      
+      // If OG title hasn't been manually edited yet, update it
+      if (!ogTitleManuallySet) {
+        setOgTitle(title);
+      }
+      
+      // If Twitter title hasn't been manually edited yet, update it
+      if (!twitterTitleManuallySet) {
+        setTwitterTitle(title);
+      }
+      
+      // Generate slug if not already set or not in edit mode
+      if (!id && (!slug || slug === '')) {
+        const generatedSlug = title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
+          .replace(/--+/g, '-'); // Fix multiple consecutive hyphens
+        setSlug(generatedSlug);
+      }
+    }
+  }, [title, id, slug, seoTitleManuallySet, ogTitleManuallySet, twitterTitleManuallySet]);
+
+  // Auto-populate descriptions
+  useEffect(() => {
+    if (description) {
+      // If SEO description hasn't been manually edited yet, update it
+      if (!seoDescriptionManuallySet) {
+        setSeoDescription(description);
+      }
+      
+      // If OG description hasn't been manually edited yet, update it  
+      if (!ogDescriptionManuallySet) {
+        setOgDescription(description);
+      }
+      
+      // If Twitter description hasn't been manually edited yet, update it
+      if (!twitterDescriptionManuallySet) {
+        setTwitterDescription(description);
+      }
+    }
+  }, [description, seoDescriptionManuallySet, ogDescriptionManuallySet, twitterDescriptionManuallySet]);
+
+  // Auto-populate images
+  useEffect(() => {
+    if (image && preview && !ogImageManuallySet) {
+      setOgImage(image);
+      setOgImagePreview(preview);
+    }
+    
+    if (image && preview && !twitterImageManuallySet) {
+      setTwitterImage(image);
+      setTwitterImagePreview(preview);
+    }
+  }, [image, preview, ogImageManuallySet, twitterImageManuallySet]);
+
+  // Auto-set canonical URL based on slug
+  useEffect(() => {
+    if (slug && !canonicalUrlManuallySet) {
+      setCanonicalUrl(`https://rtnglobal.site/blog/${slug}`);
+    }
+  }, [slug, canonicalUrlManuallySet]);
+
+  // Helper function to format image URLs consistently
+  const formatImageUrl = (imagePath) => {
+    if (!imagePath) return '';
+    
+    // If image path already starts with http(s), it's already a full URL
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    
+    // Otherwise, prepend the API URL to the relative path
+    return `${process.env.REACT_APP_API_URL}${imagePath}`;
+  };
+
+  // Wrapper functions for setters to mark fields as manually set
+  const handleSeoTitleChange = (value) => {
+    setSeoTitleManuallySet(true);
+    setSeoTitle(value);
+  };
+
+  const handleOgTitleChange = (value) => {
+    setOgTitleManuallySet(true);
+    setOgTitle(value);
+  };
+
+  const handleTwitterTitleChange = (value) => {
+    setTwitterTitleManuallySet(true);
+    setTwitterTitle(value);
+  };
+
+  const handleSeoDescriptionChange = (value) => {
+    setSeoDescriptionManuallySet(true);
+    setSeoDescription(value);
+  };
+
+  const handleOgDescriptionChange = (value) => {
+    setOgDescriptionManuallySet(true);
+    setOgDescription(value);
+  };
+
+  const handleTwitterDescriptionChange = (value) => {
+    setTwitterDescriptionManuallySet(true);
+    setTwitterDescription(value);
+  };
+
+  const handleOgImageChange = (file, preview) => {
+    setOgImageManuallySet(true);
+    setOgImage(file);
+    setOgImagePreview(preview);
+  };
+
+  const handleTwitterImageChange = (file, preview) => {
+    setTwitterImageManuallySet(true);
+    setTwitterImage(file);
+    setTwitterImagePreview(preview);
+  };
+
+  const handleCanonicalUrlChange = (value) => {
+    setCanonicalUrlManuallySet(true);
+    setCanonicalUrl(value);
+  };
+
   // Calculate SEO score and analysis on relevant data change
   useEffect(() => {
     const blogData = {
@@ -289,21 +430,10 @@ const CreateBlog = () => {
     }
   }, [id]);
 
-  // Generate slug from title
-  useEffect(() => {
-    if (title && !id && !slug) {
-      const generatedSlug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
-      setSlug(generatedSlug);
-    }
-  }, [title, id, slug]);
-
   const fetchBlog = async () => {
     setInitialLoading(true);
     try {
-      const response = await API.get(`/api/blogs/${id}`);
+      const response = await API.get(`/api/blogs/admin/${id}`);
       const data = response.data;
       
       // Basic details
@@ -317,7 +447,7 @@ const CreateBlog = () => {
       // Content
       setContent(data.content);
       if (data.image) {
-        setPreview(`${process.env.REACT_APP_API_URL}${data.image}`);
+        setPreview(formatImageUrl(data.image));
       }
       setImageAlt(data.imageAlt || '');
       setWordCount(data.wordCount || 0);
@@ -334,19 +464,19 @@ const CreateBlog = () => {
       setOgTitle(data.ogTitle || '');
       setOgDescription(data.ogDescription || '');
       if (data.ogImage) {
-        setOgImagePreview(`${process.env.REACT_APP_API_URL}${data.ogImage}`);
+        setOgImagePreview(formatImageUrl(data.ogImage));
       }
       setTwitterTitle(data.twitterTitle || '');
       setTwitterDescription(data.twitterDescription || '');
       if (data.twitterImage) {
-        setTwitterImagePreview(`${process.env.REACT_APP_API_URL}${data.twitterImage}`);
+        setTwitterImagePreview(formatImageUrl(data.twitterImage));
       }
       
       // Settings
       setIsActive(data.isActive || false);
       setStatus(data.status || 'draft');
       setLanguage(data.language || 'en');
-      setScheduledFor(data.scheduledFor || null);
+      setScheduledFor(data.scheduledFor ? new Date(data.scheduledFor) : null);
       setRevisions(data.revisions || []);
       
     } catch (err) {
@@ -360,12 +490,45 @@ const CreateBlog = () => {
     setCurrentTab(newValue);
   };
 
+  // Function to upload social media images separately
+  const uploadSocialMediaImage = async (file) => {
+    if (!file) return null;
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    try {
+      const response = await API.post('/api/blogs/upload/social-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      return response.data.url;
+    } catch (err) {
+      console.error('Error uploading social media image:', err);
+      throw new Error('Failed to upload social media image');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
   
     try {
+      // First, upload social media images if they exist
+      let ogImageUrl = null;
+      let twitterImageUrl = null;
+      
+      if (ogImage) {
+        ogImageUrl = await uploadSocialMediaImage(ogImage);
+      }
+      
+      if (twitterImage) {
+        twitterImageUrl = await uploadSocialMediaImage(twitterImage);
+      }
+      
       const formData = new FormData();
       
       // Basic Details
@@ -381,27 +544,36 @@ const CreateBlog = () => {
       if (image) {
         formData.append('image', image);
       }
-      formData.append('imageAlt', imageAlt);
+      if (imageAlt) {
+        formData.append('imageAlt', imageAlt);
+      }
       formData.append('wordCount', wordCount);
       formData.append('estimatedReadTime', estimatedReadTime);
       
       // SEO
-      formData.append('seoTitle', seoTitle);
-      formData.append('seoDescription', seoDescription);
-      formData.append('seoKeywords', JSON.stringify(seoKeywords));
+      formData.append('seoTitle', seoTitle || title); // Use title as fallback
+      formData.append('seoDescription', seoDescription || description); // Use description as fallback
+      formData.append('seoKeywords', JSON.stringify(seoKeywords.length ? seoKeywords : tags)); // Use tags as fallback
       formData.append('canonicalUrl', canonicalUrl);
       formData.append('noIndex', noIndex);
       
       // Social Media
-      formData.append('ogTitle', ogTitle);
-      formData.append('ogDescription', ogDescription);
-      if (ogImage) {
-        formData.append('ogImage', ogImage);
+      formData.append('ogTitle', ogTitle || seoTitle || title); // Use SEO title or main title as fallback
+      formData.append('ogDescription', ogDescription || seoDescription || description); // Use SEO description or main description as fallback
+      if (ogImageUrl) {
+        formData.append('ogImage', ogImageUrl);
+      } else if (ogImagePreview && ogImagePreview.startsWith('http')) {
+        // If we already have a URL from previously uploaded image
+        formData.append('ogImage', ogImagePreview);
       }
-      formData.append('twitterTitle', twitterTitle);
-      formData.append('twitterDescription', twitterDescription);
-      if (twitterImage) {
-        formData.append('twitterImage', twitterImage);
+      
+      formData.append('twitterTitle', twitterTitle || ogTitle || seoTitle || title); // Chain of fallbacks
+      formData.append('twitterDescription', twitterDescription || ogDescription || seoDescription || description); // Chain of fallbacks
+      if (twitterImageUrl) {
+        formData.append('twitterImage', twitterImageUrl);
+      } else if (twitterImagePreview && twitterImagePreview.startsWith('http')) {
+        // If we already have a URL from previously uploaded image
+        formData.append('twitterImage', twitterImagePreview);
       }
       
       // Settings
@@ -428,7 +600,7 @@ const CreateBlog = () => {
         });
       }
   
-      navigate('/admin/blog/manage');
+      navigate('/blog/manage');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save blog');
     } finally {
@@ -513,7 +685,7 @@ const CreateBlog = () => {
         <Button
           variant="text"
           startIcon={<ArrowBack />}
-          onClick={() => navigate('/admin/blog/manage')}
+          onClick={() => navigate('/blog/manage')}
           sx={{
             mb: 3,
             fontWeight: 500,
@@ -737,17 +909,16 @@ const CreateBlog = () => {
                 slug={slug}
                 tags={tags}
                 seoTitle={seoTitle}
-                setSeoTitle={setSeoTitle}
+                setSeoTitle={handleSeoTitleChange}
                 seoDescription={seoDescription}
-                setSeoDescription={setSeoDescription}
+                setSeoDescription={handleSeoDescriptionChange}
                 seoKeywords={seoKeywords}
                 setSeoKeywords={setSeoKeywords}
-                canonicalUrl={canonicalUrl}
-                setCanonicalUrl={setCanonicalUrl}
-                noIndex={noIndex}
-                setNoIndex={setNoIndex}
-                newSeoKeyword={newSeoKeyword}
                 setNewSeoKeyword={setNewSeoKeyword}
+                newSeoKeyword={newSeoKeyword}
+                canonicalUrl={canonicalUrl}
+                setCanonicalUrl={handleCanonicalUrlChange}
+                noIndex={noIndex}
                 ogTitle={ogTitle}
                 ogDescription={ogDescription}
                 ogImage={ogImage}
@@ -756,6 +927,8 @@ const CreateBlog = () => {
                 twitterDescription={twitterDescription}
                 twitterImage={twitterImage}
                 twitterImagePreview={twitterImagePreview}
+                setNoIndex={setNoIndex}
+                seoAnalysis={seoAnalysis}
               />
             </TabPanel>
             
@@ -766,21 +939,21 @@ const CreateBlog = () => {
                 image={image}
                 preview={preview}
                 ogTitle={ogTitle}
-                setOgTitle={setOgTitle}
+                setOgTitle={handleOgTitleChange}
                 ogDescription={ogDescription}
-                setOgDescription={setOgDescription}
+                setOgDescription={handleOgDescriptionChange}
                 ogImage={ogImage}
-                setOgImage={setOgImage}
+                setOgImage={(file) => handleOgImageChange(file, null)}
                 ogImagePreview={ogImagePreview}
-                setOgImagePreview={setOgImagePreview}
+                setOgImagePreview={(preview) => handleOgImageChange(ogImage, preview)}
                 twitterTitle={twitterTitle}
-                setTwitterTitle={setTwitterTitle}
+                setTwitterTitle={handleTwitterTitleChange}
                 twitterDescription={twitterDescription}
-                setTwitterDescription={setTwitterDescription}
+                setTwitterDescription={handleTwitterDescriptionChange}
                 twitterImage={twitterImage}
-                setTwitterImage={setTwitterImage}
+                setTwitterImage={(file) => handleTwitterImageChange(file, null)}
                 twitterImagePreview={twitterImagePreview}
-                setTwitterImagePreview={setTwitterImagePreview}
+                setTwitterImagePreview={(preview) => handleTwitterImageChange(twitterImage, preview)}
               />
             </TabPanel>
             
@@ -848,7 +1021,7 @@ const CreateBlog = () => {
               <Box>
                 <Button
                   variant="outlined"
-                  onClick={() => navigate('/admin/blog/manage')}
+                  onClick={() => navigate('/blog/manage')}
                   sx={{
                     borderRadius: '10px',
                     px: 3,

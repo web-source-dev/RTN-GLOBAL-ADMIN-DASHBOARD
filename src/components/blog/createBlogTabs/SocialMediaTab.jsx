@@ -83,6 +83,19 @@ const SocialMediaTab = ({
   const displayTwitterDescription = twitterDescription || description;
   const displayTwitterImage = twitterImagePreview || preview;
 
+  // Helper function to format image URLs correctly
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return '';
+    
+    // If it's a blob URL (from local file selection) or already has http/https, use as is
+    if (imageUrl.startsWith('blob:') || imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    
+    // Otherwise, it's a relative path from the backend that needs the API URL
+    return `${process.env.REACT_APP_API_URL}${imageUrl}`;
+  };
+
   return (
     <Box>
       <Typography 
@@ -207,7 +220,7 @@ const SocialMediaTab = ({
                   }}
                 >
                   <img
-                    src={ogImagePreview}
+                    src={getImageUrl(ogImagePreview)}
                     alt="Facebook/Open Graph preview image"
                     style={{ 
                       maxWidth: '100%', 
@@ -253,7 +266,7 @@ const SocialMediaTab = ({
                 <CardMedia
                   component="img"
                   height="261"
-                  image={displayOgImage}
+                  image={getImageUrl(displayOgImage)}
                   alt="Facebook sharing preview"
                   sx={{ objectFit: 'cover' }}
                 />
@@ -381,7 +394,7 @@ const SocialMediaTab = ({
                   }}
                 >
                   <img
-                    src={twitterImagePreview}
+                    src={getImageUrl(twitterImagePreview)}
                     alt="Twitter Card preview image"
                     style={{ 
                       maxWidth: '100%', 
@@ -427,7 +440,7 @@ const SocialMediaTab = ({
                 <CardMedia
                   component="img"
                   height="261"
-                  image={displayTwitterImage}
+                  image={getImageUrl(displayTwitterImage)}
                   alt="Twitter sharing preview"
                   sx={{ objectFit: 'cover' }}
                 />

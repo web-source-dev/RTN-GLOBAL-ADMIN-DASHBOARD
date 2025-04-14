@@ -185,7 +185,7 @@ const ManageBlog = () => {
               variant="contained"
               color="primary"
               startIcon={<Add />}
-              onClick={() => navigate('/admin/blog/create')}
+              onClick={() => navigate('/blog/create')}
               sx={{ 
                 borderRadius: '10px',
                 px: 3,
@@ -510,7 +510,7 @@ const ManageBlog = () => {
                                   }}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(`/admin/blog/edit/${blog._id}`);
+                                    navigate(`/blog/edit/${blog._id}`);
                                   }}
                                 >
                                   <Edit fontSize="small" />

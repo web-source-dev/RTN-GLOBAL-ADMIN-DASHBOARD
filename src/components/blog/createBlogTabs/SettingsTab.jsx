@@ -334,7 +334,13 @@ const SettingsTab = ({
                       />
                     </Box>
                     <Typography variant="body2" color="text.secondary">
-                      Updated by: {revision.updatedBy?.name || 'Unknown'}
+                      Updated by: {
+                        revision?.updatedBy?.firstName
+                          ? `${revision.updatedBy.firstName} ${revision.updatedBy.lastName || ''}`
+                          : revision?.updatedBy?.name 
+                            ? revision.updatedBy.name
+                            : 'Unknown user'
+                      }
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {revision.changes}
