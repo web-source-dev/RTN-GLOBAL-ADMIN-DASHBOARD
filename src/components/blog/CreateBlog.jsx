@@ -21,12 +21,28 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Tabs,
+  Tab,
+  Badge,
+  Drawer,
+  Tooltip
 } from '@mui/material';
-import { PhotoCamera, Close, ArrowBack, Article, Description, LocalOffer, Category } from '@mui/icons-material';
+import { PhotoCamera, Close, ArrowBack, Article, Description, LocalOffer, Category, Search, Share, Settings, CheckCircle, Warning, Analytics, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import API from '../../BackendAPi/ApiProvider';
+
+// Import tab components
+import BasicDetailsTab from './createBlogTabs/BasicDetailsTab';
+import ContentTab from './createBlogTabs/ContentTab';
+import SeoTab from './createBlogTabs/SeoTab';
+import SocialMediaTab from './createBlogTabs/SocialMediaTab';
+import SettingsTab from './createBlogTabs/SettingsTab';
+import SeoScoreDisplay from './createBlogTabs/SeoScoreDisplay';
+
+// Import SEO validator
+import { calculateSeoScore } from './utils/SeoValidator';
 
 // Predefined categories
 const CATEGORIES = [
@@ -43,25 +59,212 @@ const CATEGORIES = [
   'Uncategorized'
 ];
 
+// Tab Panel component
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`blog-tabpanel-${index}`}
+      aria-labelledby={`blog-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ pt: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+// Create a floating SEO analysis component
+const FloatingSeoAnalysis = ({ seoAnalysis, visible, toggleVisibility }) => {
+  const theme = useTheme();
+  
+  return (
+    <Drawer
+      variant="persistent"
+      anchor="right"
+      open={visible}
+      sx={{
+        '& .MuiDrawer-paper': {
+          width: { xs: '100%', sm: '360px', md: '380px' },
+          height: 'calc(100% - 100px)',
+          top: '90px',
+          borderRadius: { xs: '0', sm: '16px 0 0 16px' },
+          border: `1px solid ${theme.palette.divider}`,
+          borderRight: 'none',
+          boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.05)',
+          zIndex: 1100,
+          overflowY: 'auto',
+          padding: 2,
+        },
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography 
+          variant="subtitle1" 
+          fontWeight={600} 
+          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+        >
+          <Analytics fontSize="small" />
+          SEO Analysis
+        </Typography>
+        <IconButton 
+          onClick={toggleVisibility} 
+          size="small"
+          sx={{ 
+            bgcolor: theme.palette.primary.main, 
+            color: 'white', 
+            '&:hover': { bgcolor: theme.palette.primary.dark } 
+          }}
+        >
+          <ChevronRight fontSize="small" />
+        </IconButton>
+      </Box>
+      
+      <SeoScoreDisplay seoAnalysis={seoAnalysis} />
+    </Drawer>
+  );
+};
+
+// Add collapsible toggle button for the SEO panel
+const SeoAnalysisToggle = ({ visible, toggleVisibility }) => {
+  const theme = useTheme();
+  
+  return (
+    <Tooltip title={visible ? "Hide SEO Analysis" : "Show SEO Analysis"} placement="left">
+      <IconButton
+        onClick={toggleVisibility}
+        sx={{
+          position: 'fixed',
+          right: visible ? { xs: '380px', sm: '380px' } : 0,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          bgcolor: theme.palette.primary.main,
+          color: 'white',
+          zIndex: 1099,
+          boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+          borderRadius: visible ? '8px 0 0 8px' : '8px 0 0 8px',
+          '&:hover': {
+            bgcolor: theme.palette.primary.dark,
+          },
+          transition: 'right 225ms cubic-bezier(0, 0, 0.2, 1) 0ms',
+        }}
+      >
+        {visible ? <ChevronRight /> : <ChevronLeft />}
+      </IconButton>
+    </Tooltip>
+  );
+};
+
 const CreateBlog = () => {
   const theme = useTheme();
   const { id } = useParams(); // Get blog ID if editing
   const navigate = useNavigate();
+  
+  // Tab state
+  const [currentTab, setCurrentTab] = useState(0);
+  
+  // SEO Analysis panel visibility state
+  const [seoAnalysisPanelVisible, setSeoAnalysisPanelVisible] = useState(false);
+  const [seoAnalysis, setSeoAnalysis] = useState(null);
+
+  // Toggle SEO Analysis panel visibility
+  const toggleSeoAnalysisPanel = () => {
+    setSeoAnalysisPanelVisible(!seoAnalysisPanelVisible);
+  };
+  
+  // Basic Details state
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
-  const [content, setContent] = useState('');
   const [category, setCategory] = useState('Uncategorized');
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
+  const [customCategories, setCustomCategories] = useState([]);
+  const [allCategories, setAllCategories] = useState([...CATEGORIES]);
+  
+  // Content state
+  const [content, setContent] = useState('');
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState('');
+  const [imageAlt, setImageAlt] = useState('');
+  const [wordCount, setWordCount] = useState(0);
+  const [estimatedReadTime, setEstimatedReadTime] = useState(0);
+  
+  // SEO state
+  const [seoTitle, setSeoTitle] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
+  const [seoKeywords, setSeoKeywords] = useState([]);
+  const [newSeoKeyword, setNewSeoKeyword] = useState('');
+  const [canonicalUrl, setCanonicalUrl] = useState('');
+  const [noIndex, setNoIndex] = useState(false);
+  const [seoScore, setSeoScore] = useState(0);
+  
+  // Social Media state
+  const [ogTitle, setOgTitle] = useState('');
+  const [ogDescription, setOgDescription] = useState('');
+  const [ogImage, setOgImage] = useState(null);
+  const [ogImagePreview, setOgImagePreview] = useState('');
+  const [twitterTitle, setTwitterTitle] = useState('');
+  const [twitterDescription, setTwitterDescription] = useState('');
+  const [twitterImage, setTwitterImage] = useState(null);
+  const [twitterImagePreview, setTwitterImagePreview] = useState('');
+  
+  // Settings state
+  const [isActive, setIsActive] = useState(false);
+  const [status, setStatus] = useState('draft');
+  const [language, setLanguage] = useState('en');
+  const [scheduledFor, setScheduledFor] = useState(null);
+  const [revisions, setRevisions] = useState([]);
+  
+  // UI state
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
-  const [customCategories, setCustomCategories] = useState([]);
-  const [allCategories, setAllCategories] = useState([...CATEGORIES]);
+  const [seoTabBadge, setSeoTabBadge] = useState(0);
+  
+  // Calculate SEO score and analysis on relevant data change
+  useEffect(() => {
+    const blogData = {
+      title,
+      description,
+      content,
+      slug,
+      tags,
+      seoTitle,
+      seoDescription,
+      seoKeywords,
+      canonicalUrl,
+      noIndex,
+      ogTitle,
+      ogDescription,
+      ogImage: ogImagePreview,
+      twitterTitle,
+      twitterDescription,
+      twitterImage: twitterImagePreview
+    };
+    
+    const analysis = calculateSeoScore(blogData);
+    setSeoScore(analysis.score);
+    setSeoAnalysis(analysis);
+    
+    // Set badge content based on score
+    if (analysis.score < 50) {
+      setSeoTabBadge(1); // Needs attention
+    } else {
+      setSeoTabBadge(0); // Good
+    }
+  }, [
+    title, description, content, slug, tags, 
+    seoTitle, seoDescription, seoKeywords, canonicalUrl, noIndex,
+    ogTitle, ogDescription, ogImagePreview, twitterTitle, twitterDescription, twitterImagePreview
+  ]);
 
   useEffect(() => {
     // Fetch existing categories from the backend
@@ -102,20 +305,134 @@ const CreateBlog = () => {
     try {
       const response = await API.get(`/api/blogs/${id}`);
       const data = response.data;
+      
+      // Basic details
       setTitle(data.title);
       setSlug(data.slug || '');
       setDescription(data.description);
-      setContent(data.content);
       setCategory(data.category || 'Uncategorized');
       setTags(data.tags || []);
       setIsFeatured(data.isFeatured || false);
+      
+      // Content
+      setContent(data.content);
       if (data.image) {
         setPreview(`${process.env.REACT_APP_API_URL}${data.image}`);
       }
+      setImageAlt(data.imageAlt || '');
+      setWordCount(data.wordCount || 0);
+      setEstimatedReadTime(data.estimatedReadTime || 0);
+      
+      // SEO
+      setSeoTitle(data.seoTitle || '');
+      setSeoDescription(data.seoDescription || '');
+      setSeoKeywords(data.seoKeywords || []);
+      setCanonicalUrl(data.canonicalUrl || '');
+      setNoIndex(data.noIndex || false);
+      
+      // Social Media
+      setOgTitle(data.ogTitle || '');
+      setOgDescription(data.ogDescription || '');
+      if (data.ogImage) {
+        setOgImagePreview(`${process.env.REACT_APP_API_URL}${data.ogImage}`);
+      }
+      setTwitterTitle(data.twitterTitle || '');
+      setTwitterDescription(data.twitterDescription || '');
+      if (data.twitterImage) {
+        setTwitterImagePreview(`${process.env.REACT_APP_API_URL}${data.twitterImage}`);
+      }
+      
+      // Settings
+      setIsActive(data.isActive || false);
+      setStatus(data.status || 'draft');
+      setLanguage(data.language || 'en');
+      setScheduledFor(data.scheduledFor || null);
+      setRevisions(data.revisions || []);
+      
     } catch (err) {
       setError(err.message);
     } finally {
       setInitialLoading(false);
+    }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+  
+    try {
+      const formData = new FormData();
+      
+      // Basic Details
+      formData.append('title', title);
+      formData.append('slug', slug);
+      formData.append('description', description);
+      formData.append('category', category);
+      formData.append('tags', JSON.stringify(tags));
+      formData.append('isFeatured', isFeatured);
+      
+      // Content
+      formData.append('content', content);
+      if (image) {
+        formData.append('image', image);
+      }
+      formData.append('imageAlt', imageAlt);
+      formData.append('wordCount', wordCount);
+      formData.append('estimatedReadTime', estimatedReadTime);
+      
+      // SEO
+      formData.append('seoTitle', seoTitle);
+      formData.append('seoDescription', seoDescription);
+      formData.append('seoKeywords', JSON.stringify(seoKeywords));
+      formData.append('canonicalUrl', canonicalUrl);
+      formData.append('noIndex', noIndex);
+      
+      // Social Media
+      formData.append('ogTitle', ogTitle);
+      formData.append('ogDescription', ogDescription);
+      if (ogImage) {
+        formData.append('ogImage', ogImage);
+      }
+      formData.append('twitterTitle', twitterTitle);
+      formData.append('twitterDescription', twitterDescription);
+      if (twitterImage) {
+        formData.append('twitterImage', twitterImage);
+      }
+      
+      // Settings
+      formData.append('isActive', isActive);
+      formData.append('status', status);
+      formData.append('language', language);
+      if (scheduledFor) {
+        formData.append('scheduledFor', scheduledFor.toISOString());
+      }
+      
+      let response;
+      
+      if (id) {
+        response = await API.patch(`/api/blogs/${id}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      } else {
+        response = await API.post('/api/blogs', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      }
+  
+      navigate('/admin/blog/manage');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save blog');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -151,49 +468,6 @@ const CreateBlog = () => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleAddTag();
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-  
-    try {
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('slug', slug);
-      formData.append('description', description);
-      formData.append('content', content);
-      formData.append('category', category);
-      formData.append('tags', JSON.stringify(tags));
-      formData.append('isFeatured', isFeatured);
-      
-      if (image) {
-        formData.append('image', image);
-      }
-  
-      let response;
-      
-      if (id) {
-        response = await API.patch(`/api/blogs/${id}`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-      } else {
-        response = await API.post('/api/blogs', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-      }
-  
-      navigate('/admin/blog/manage');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save blog');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -264,8 +538,26 @@ const CreateBlog = () => {
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.05)',
             border: `1px solid ${theme.palette.divider}`,
             overflow: 'hidden',
+            position: 'relative', // Add this for positioning context
           }}
         >
+          {/* Show SEO Analysis toggle button only when not on SEO tab */}
+          {currentTab !== 2 && (
+            <SeoAnalysisToggle 
+              visible={seoAnalysisPanelVisible} 
+              toggleVisibility={toggleSeoAnalysisPanel} 
+            />
+          )}
+          
+          {/* Show floating SEO Analysis panel only when not on SEO tab */}
+          {currentTab !== 2 && (
+            <FloatingSeoAnalysis 
+              seoAnalysis={seoAnalysis} 
+              visible={seoAnalysisPanelVisible}
+              toggleVisibility={toggleSeoAnalysisPanel}
+            />
+          )}
+          
           <Box 
             sx={{ 
               mb: 4,
@@ -288,7 +580,7 @@ const CreateBlog = () => {
             >
               <Article sx={{ color: '#fff', fontSize: 28 }} />
             </Box>
-            <Box>
+            <Box sx={{ flex: 1 }}>
               <Typography 
                 variant="h4" 
                 sx={{
@@ -309,9 +601,19 @@ const CreateBlog = () => {
                 {id ? 'Update your existing post with new content' : 'Share your thoughts and insights with the world'}
               </Typography>
             </Box>
+            
+            {/* SEO Score Chip */}
+            <Chip
+              label={`SEO: ${seoScore}%`}
+              color={seoScore >= 70 ? 'success' : seoScore >= 50 ? 'warning' : 'error'}
+              sx={{ 
+                fontWeight: 600,
+                height: 32,
+                borderRadius: '8px'
+              }}
+              icon={seoScore >= 70 ? <CheckCircle fontSize="small" /> : <Warning fontSize="small" />}
+            />
           </Box>
-
-          <Divider sx={{ mb: 4 }} />
 
           {error && (
             <Alert 
@@ -329,382 +631,221 @@ const CreateBlog = () => {
           )}
 
           <form onSubmit={handleSubmit}>
-            <Stack spacing={4}>
-              <Box>
-                <Typography 
-                  variant="subtitle1" 
+            {/* Tab Navigation */}
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs 
+                value={currentTab} 
+                onChange={handleTabChange} 
+                variant="scrollable"
+                scrollButtons="auto"
                   sx={{ 
-                    mb: 1.5,
+                  '& .MuiTab-root': {
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    fontSize: '0.95rem',
+                    minHeight: 48,
+                  },
+                  '& .Mui-selected': {
                     fontWeight: 600,
-                    color: theme.palette.text.primary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}
-                >
-                  <Description fontSize="small" />
-                  Blog Details
-                </Typography>
-                
-                {/* Featured Post Switch */}
-                <Box 
-                  sx={{ 
-                    mb: 3, 
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    px: 2,
-                    py: 1.5,
-                    borderRadius: '10px',
-                    border: `1px solid ${theme.palette.divider}`,
-                    backgroundColor: isFeatured ? 
-                      theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.08)' : 'rgba(33, 150, 243, 0.05)' 
-                      : 'transparent'
-                  }}
-                >
-                  <Box>
-                    <Typography variant="subtitle2">Featured Post</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Featured posts appear prominently on the homepage
-                    </Typography>
-                  </Box>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={isFeatured}
-                        onChange={(e) => setIsFeatured(e.target.checked)}
-                        color="primary"
-                      />
+                  }
+                }}
+              >
+                <Tab 
+                  label="Basic Details" 
+                  icon={<Description fontSize="small" />} 
+                  iconPosition="start"
+                />
+                <Tab 
+                  label="Content" 
+                  icon={<Article fontSize="small" />} 
+                  iconPosition="start"
+                />
+                <Tab 
+                  label="SEO" 
+                  icon={<Search fontSize="small" />} 
+                  iconPosition="start"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      right: -8,
+                      top: 8,
                     }
-                    label=""
-                  />
-                </Box>
-                
-                <TextField
-                  label="Blog Title"
-                  variant="outlined"
-                  fullWidth
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  sx={{
-                    mb: 3,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '10px',
-                      '&:hover fieldset': {
-                        borderColor: theme.palette.primary.main,
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderWidth: '1px',
-                      },
-                    },
-                    '& .MuiInputLabel-outlined': {
-                      '&.Mui-focused': {
-                        color: theme.palette.primary.main,
-                      },
-                    },
                   }}
+                  {...(seoTabBadge > 0 && {
+                    component: Badge,
+                    badgeContent: seoTabBadge,
+                    color: "warning"
+                  })}
                 />
-                
-                {/* Slug field */}
-                <TextField
-                  label="URL Slug"
-                  variant="outlined"
-                  fullWidth
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))}
-                  helperText="Custom URL path for the blog post (auto-generated from title if left empty)"
-                  sx={{
-                    mb: 3,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '10px',
-                    },
-                  }}
+                <Tab 
+                  label="Social Media" 
+                  icon={<Share fontSize="small" />} 
+                  iconPosition="start"
                 />
+                <Tab 
+                  label="Settings" 
+                  icon={<Settings fontSize="small" />} 
+                  iconPosition="start"
+                />
+              </Tabs>
+            </Box>
 
-                <TextField
-                  label="Short Description"
-                  variant="outlined"
-                  fullWidth
-                  required
-                  multiline
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  sx={{
-                    mb: 3,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '10px',
-                      '&:hover fieldset': {
-                        borderColor: theme.palette.primary.main,
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderWidth: '1px',
-                      },
-                    },
-                    '& .MuiInputLabel-outlined': {
-                      '&.Mui-focused': {
-                        color: theme.palette.primary.main,
-                      },
-                    },
-                  }}
-                />
-                
-                {/* Category Select */}
-                <FormControl fullWidth sx={{ mb: 3 }}>
-                  <InputLabel id="category-label">Category</InputLabel>
-                  <Select
-                    labelId="category-label"
-                    value={category}
-                    label="Category"
-                    onChange={(e) => setCategory(e.target.value)}
+            {/* Tab Panels */}
+            <TabPanel value={currentTab} index={0}>
+              <BasicDetailsTab
+                title={title}
+                setTitle={setTitle}
+                slug={slug}
+                setSlug={setSlug}
+                description={description}
+                setDescription={setDescription}
+                category={category}
+                setCategory={setCategory}
+                tags={tags}
+                setTags={setTags}
+                tagInput={tagInput}
+                setTagInput={setTagInput}
+                isFeatured={isFeatured}
+                setIsFeatured={setIsFeatured}
+                customCategories={customCategories}
+                setCustomCategories={setCustomCategories}
+                allCategories={allCategories}
+              />
+            </TabPanel>
+            
+            <TabPanel value={currentTab} index={1}>
+              <ContentTab
+                content={content}
+                setContent={setContent}
+                image={image}
+                setImage={setImage}
+                preview={preview}
+                setPreview={setPreview}
+                imageAlt={imageAlt}
+                setImageAlt={setImageAlt}
+                wordCount={wordCount}
+                setWordCount={setWordCount}
+                estimatedReadTime={estimatedReadTime}
+                setEstimatedReadTime={setEstimatedReadTime}
+              />
+            </TabPanel>
+            
+            <TabPanel value={currentTab} index={2}>
+              <SeoTab
+                title={title}
+                description={description}
+                content={content}
+                slug={slug}
+                tags={tags}
+                seoTitle={seoTitle}
+                setSeoTitle={setSeoTitle}
+                seoDescription={seoDescription}
+                setSeoDescription={setSeoDescription}
+                seoKeywords={seoKeywords}
+                setSeoKeywords={setSeoKeywords}
+                canonicalUrl={canonicalUrl}
+                setCanonicalUrl={setCanonicalUrl}
+                noIndex={noIndex}
+                setNoIndex={setNoIndex}
+                newSeoKeyword={newSeoKeyword}
+                setNewSeoKeyword={setNewSeoKeyword}
+                ogTitle={ogTitle}
+                ogDescription={ogDescription}
+                ogImage={ogImage}
+                ogImagePreview={ogImagePreview}
+                twitterTitle={twitterTitle}
+                twitterDescription={twitterDescription}
+                twitterImage={twitterImage}
+                twitterImagePreview={twitterImagePreview}
+              />
+            </TabPanel>
+            
+            <TabPanel value={currentTab} index={3}>
+              <SocialMediaTab
+                title={title}
+                description={description}
+                image={image}
+                preview={preview}
+                ogTitle={ogTitle}
+                setOgTitle={setOgTitle}
+                ogDescription={ogDescription}
+                setOgDescription={setOgDescription}
+                ogImage={ogImage}
+                setOgImage={setOgImage}
+                ogImagePreview={ogImagePreview}
+                setOgImagePreview={setOgImagePreview}
+                twitterTitle={twitterTitle}
+                setTwitterTitle={setTwitterTitle}
+                twitterDescription={twitterDescription}
+                setTwitterDescription={setTwitterDescription}
+                twitterImage={twitterImage}
+                setTwitterImage={setTwitterImage}
+                twitterImagePreview={twitterImagePreview}
+                setTwitterImagePreview={setTwitterImagePreview}
+              />
+            </TabPanel>
+            
+            <TabPanel value={currentTab} index={4}>
+              <SettingsTab
+                isActive={isActive}
+                setIsActive={setIsActive}
+                status={status}
+                setStatus={setStatus}
+                language={language}
+                setLanguage={setLanguage}
+                scheduledFor={scheduledFor}
+                setScheduledFor={setScheduledFor}
+                revisions={revisions}
+                wordCount={wordCount}
+                estimatedReadTime={estimatedReadTime}
+              />
+            </TabPanel>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* Navigation and Submit Buttons */}
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'space-between' }}>
+              <Box>
+                {currentTab > 0 && (
+                  <Button
+                    variant="outlined"
+                    onClick={() => setCurrentTab(currentTab - 1)}
                     sx={{
                       borderRadius: '10px',
-                      '& .MuiOutlinedInput-notchedOutline': {
+                      px: 3,
+                      py: 1.2,
+                      textTransform: 'none',
+                      fontWeight: 500,
                         borderColor: theme.palette.divider,
-                      },
+                      color: theme.palette.text.secondary,
+                      mr: 2,
+                      '&:hover': {
+                        borderColor: theme.palette.text.secondary,
+                        backgroundColor: 'transparent',
+                      }
                     }}
-                    startAdornment={<Category sx={{ mr: 1, color: 'action.active' }} />}
                   >
-                    {allCategories.map((cat) => (
-                      <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-                    ))}
-                    <MenuItem value="custom">
-                      <em>Add Custom Category</em>
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-                
-                {/* Custom Category Input */}
-                {category === 'custom' && (
-                  <TextField
-                    label="Custom Category"
-                    variant="outlined"
-                    fullWidth
-                    value={customCategories}
-                    onChange={(e) => {
-                      setCustomCategories(e.target.value);
-                      setCategory(e.target.value);
-                    }}
-                    sx={{ mb: 3, borderRadius: '10px' }}
-                  />
+                    Previous
+                  </Button>
                 )}
                 
-                {/* Tags Input */}
-                <Box sx={{ mb: 3 }}>
-                  <Typography 
-                    variant="subtitle2" 
-                    sx={{ 
-                      mb: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.5
-                    }}
-                  >
-                    <LocalOffer fontSize="small" />
-                    Tags
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                    <TextField
-                      variant="outlined"
-                      placeholder="Add a tag"
-                      size="small"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={handleTagInputKeyDown}
-                      fullWidth
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '10px',
-                        },
-                      }}
-                    />
+                {currentTab < 4 && (
                     <Button
                       variant="contained"
-                      onClick={handleAddTag}
+                    onClick={() => setCurrentTab(currentTab + 1)}
                       sx={{
-                        borderRadius: '10px',
-                        px: 2,
-                        py: 1,
-                        minWidth: '80px',
-                        textTransform: 'none',
-                      }}
-                    >
-                      Add
-                    </Button>
-                  </Box>
-                  
-                  {tags.length > 0 && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                      {tags.map((tag) => (
-                        <Chip
-                          key={tag}
-                          label={tag}
-                          onDelete={() => handleRemoveTag(tag)}
-                          color="primary"
-                          variant="outlined"
-                          sx={{ borderRadius: '8px' }}
-                        />
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-              </Box>
-
-              <Box>
-                <Typography 
-                  variant="subtitle1" 
-                  sx={{ 
-                    mb: 1.5,
-                    fontWeight: 600,
-                    color: theme.palette.text.primary,
-                    display: 'flex', 
-                    alignItems: 'center',
-                    gap: 1
-                  }}
-                >
-                  <Article fontSize="small" />
-                  Content
-                </Typography>
-                <Box 
-                  sx={{
-                    '.ql-toolbar': {
-                      borderTopLeftRadius: '10px',
-                      borderTopRightRadius: '10px',
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                      borderColor: theme.palette.divider,
-                    },
-                    '.ql-container': {
-                      borderBottomLeftRadius: '10px',
-                      borderBottomRightRadius: '10px',
-                      borderColor: theme.palette.divider,
-                      minHeight: '350px',
-                      fontSize: '1rem',
-                    },
-                    '.ql-editor': {
-                      minHeight: '350px',
-                    }
-                  }}
-                >
-                  <ReactQuill
-                    value={content}
-                    onChange={setContent}
-                    modules={modules}
-                    formats={formats}
-                  />
-                </Box>
-              </Box>
-
-              <Box>
-                <Typography 
-                  variant="subtitle1" 
-                  sx={{ 
-                    mb: 2,
-                    fontWeight: 600,
-                    color: theme.palette.text.primary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}
-                >
-                  <PhotoCamera fontSize="small" />
-                  Featured Image
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <input
-                    accept="image/*"
-                    type="file"
-                    id="image-upload"
-                    hidden
-                    onChange={handleImageChange}
-                  />
-                  <label htmlFor="image-upload">
-                    <Button
-                      variant="contained"
-                      component="span"
-                      startIcon={<PhotoCamera />}
-                      sx={{
-                        backgroundColor: preview ? theme.palette.primary.main : 'transparent',
-                        color: preview ? '#fff' : theme.palette.primary.main,
-                        border: preview ? 'none' : `1px solid ${theme.palette.primary.main}`,
                         borderRadius: '10px',
                         px: 3,
                         py: 1.2,
                         textTransform: 'none',
                         fontWeight: 500,
-                        boxShadow: preview ? theme.shadows[2] : 'none',
-                        '&:hover': {
-                          backgroundColor: preview ? theme.palette.primary.dark : 'rgba(0, 0, 0, 0.04)',
-                        }
                       }}
                     >
-                      {preview ? 'Change Image' : 'Upload Image'}
+                    Next
                     </Button>
-                  </label>
-                  {!preview && (
-                    <Typography variant="caption" color="text.secondary">
-                      Recommended size: 1200 x 630 pixels (Max: 5MB)
-                    </Typography>
-                  )}
-                </Box>
-
-                {preview && (
-                  <Box sx={{ mt: 3, position: 'relative', display: 'inline-block' }}>
-                    <Paper
-                      elevation={3}
-                      sx={{
-                        p: 1,
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        backgroundColor: theme.palette.background.default,
-                      }}
-                    >
-                      <img
-                        src={preview}
-                        alt="Preview"
-                        style={{ 
-                          maxWidth: '100%', 
-                          height: 'auto',
-                          maxHeight: '300px',
-                          borderRadius: '8px',
-                          display: 'block',
-                        }}
-                      />
-                    </Paper>
-                    <IconButton
-                      sx={{
-                        position: 'absolute',
-                        top: -12,
-                        right: -12,
-                        backgroundColor: theme.palette.error.main,
-                        color: '#fff',
-                        boxShadow: theme.shadows[2],
-                        '&:hover': {
-                          backgroundColor: theme.palette.error.dark,
-                        },
-                        border: `2px solid ${theme.palette.background.paper}`,
-                      }}
-                      size="small"
-                      onClick={removeImage}
-                    >
-                      <Close fontSize="small" />
-                    </IconButton>
-                    <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
-                      <Chip 
-                        label="Featured Image" 
-                        size="small" 
-                        color="primary" 
-                        sx={{ borderRadius: '8px' }}
-                      />
-                    </Box>
-                  </Box>
                 )}
               </Box>
 
-              <Divider sx={{ my: 2 }} />
-
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+              <Box>
                 <Button
                   variant="outlined"
                   onClick={() => navigate('/admin/blog/manage')}
@@ -716,6 +857,7 @@ const CreateBlog = () => {
                     fontWeight: 500,
                     borderColor: theme.palette.divider,
                     color: theme.palette.text.secondary,
+                    mr: 2,
                     '&:hover': {
                       borderColor: theme.palette.text.secondary,
                       backgroundColor: 'transparent',
@@ -750,7 +892,7 @@ const CreateBlog = () => {
                   )}
                 </Button>
               </Box>
-            </Stack>
+            </Box>
           </form>
         </Paper>
       </Container>
