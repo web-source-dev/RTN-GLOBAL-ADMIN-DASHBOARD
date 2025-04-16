@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Close, Image, CloudUpload, AccessibilityNew, Link as LinkIcon } from '@mui/icons-material';
 
-const ImageModal = ({ open, onClose, onInsert }) => {
+const ImageModal = ({ open, onClose, onInsert, initialFile }) => {
   const theme = useTheme();
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState('');
@@ -26,6 +26,21 @@ const ImageModal = ({ open, onClose, onInsert }) => {
   const [error, setError] = useState('');
   
   const fileInputRef = useRef(null);
+  
+  // Handle initial file when provided (from drag and drop)
+  useEffect(() => {
+    if (initialFile && open) {
+      setSelectedFile(initialFile);
+      setPreview(URL.createObjectURL(initialFile));
+      setIsUrlMode(false); // Ensure we're in file upload mode
+      setError(''); // Clear any previous errors
+      
+      // Focus on the alt text field after a short delay
+      setTimeout(() => {
+        document.querySelector('[name="alt-text"]')?.focus();
+      }, 300);
+    }
+  }, [initialFile, open]);
   
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -137,6 +152,13 @@ const ImageModal = ({ open, onClose, onInsert }) => {
             {error}
           </Alert>
         )}
+        
+        <Alert 
+          severity="info" 
+          sx={{ mb: 3, borderRadius: '8px' }}
+        >
+          After inserting, you can resize images by dragging the corners.
+        </Alert>
         
         <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
           <Button
@@ -257,6 +279,7 @@ const ImageModal = ({ open, onClose, onInsert }) => {
           />
           <TextField
             label="Alt Text"
+            name="alt-text"
             placeholder="Describe the image for accessibility and SEO"
             fullWidth
             required

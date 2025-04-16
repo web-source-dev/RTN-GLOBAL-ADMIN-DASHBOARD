@@ -24,8 +24,6 @@ import {
   Alert,
   List,
   ListItem,
-  ListItemIcon,
-  ListItemText
 } from '@mui/material';
 import { 
   Article, 
@@ -55,7 +53,6 @@ import {
   TableChart,
   Save,
   UploadFile,
-  FormatLineSpacingTwoTone,
   TocOutlined,
   CheckCircleOutline,
   AccessAlarmsOutlined,
@@ -66,13 +63,12 @@ import {
 } from '@mui/icons-material';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-
-// Import Tiptap dependencies
+import EditIcon from '@mui/icons-material/Edit';
+import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
+import DualModeEditor from './extensions/DualModeEditor'
 import { useEditor, EditorContent, Extension } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import Image from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import Color from '@tiptap/extension-color';
@@ -80,30 +76,25 @@ import TextStyle from '@tiptap/extension-text-style';
 import Placeholder from '@tiptap/extension-placeholder';
 import Highlight from '@tiptap/extension-highlight';
 import Youtube from '@tiptap/extension-youtube';
-// Table extensions
 import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
-
-// Import the custom modal components
+import ResizableImage from './extensions/ResizableImageExtension';
+import FontSizeExtension from './extensions/FontSizeExtension';
+import FontFamilyExtension from './extensions/FontFamilyExtension';
+import './extensions/ResizableImageStyles.css';
 import LinkModal from './modals/LinkModal';
 import ImageModal from './modals/ImageModal';
 import YouTubeModal from './modals/YouTubeModal';
 import TableModal from './modals/TableModal';
 import TableMenu from './tableComponents/TableMenu';
-
-// Color palettes
 const TEXT_COLORS = [
-  // Basic colors
   '#000000', '#434343', '#666666', '#999999', '#B7B7B7', '#CCCCCC', '#D9D9D9', '#EFEFEF', '#F3F3F3', '#FFFFFF',
-  // Red palette
   '#980000', '#FF0000', '#FF9900', '#FFFF00', '#00FF00', '#00FFFF', '#4A86E8', '#0000FF', '#9900FF', '#FF00FF',
-  // Material palette
   '#E53935', '#D81B60', '#8E24AA', '#5E35B1', '#3949AB', '#1E88E5', '#039BE5', '#00ACC1', '#00897B', '#43A047',
   '#7CB342', '#C0CA33', '#FDD835', '#FFB300', '#FB8C00', '#F4511E', '#6D4C41', '#757575', '#546E7A', '#78909C',
 ];
-
 const HIGHLIGHT_COLORS = [
   '#FFFF00', '#FFFF99', '#FFFFCC', 
   '#FFCCFF', '#FF99FF', '#FF66FF',
@@ -116,8 +107,6 @@ const HIGHLIGHT_COLORS = [
   '#D9E5F1', '#B2C9DB', '#8CACC5',
   '#FFFFFF', '#EEEEEE', '#E0E0E0'
 ];
-
-// Color Palette Component
 const ColorPalette = ({ colors, onSelectColor, onClose }) => {
   const theme = useTheme();
   
@@ -129,7 +118,7 @@ const ColorPalette = ({ colors, onSelectColor, onClose }) => {
         borderRadius: '8px',
         boxShadow: theme.shadows[8],
         border: `1px solid ${theme.palette.divider}`,
-        maxWidth: '270px', // Adjusted for 10 colors per row
+        maxWidth: '270px',
       }}>
         <Box sx={{ 
           display: 'grid', 
@@ -164,50 +153,6 @@ const ColorPalette = ({ colors, onSelectColor, onClose }) => {
     </ClickAwayListener>
   );
 };
-
-// Custom font size extension
-const FontSize = Extension.create({
-  name: 'fontSize',
-
-  addOptions() {
-    return {
-      types: ['textStyle'],
-    }
-  },
-
-  addGlobalAttributes() {
-    return [
-      {
-        types: this.options.types,
-        attributes: {
-          fontSize: {
-            default: null,
-            parseHTML: element => element.style.fontSize,
-            renderHTML: attributes => {
-              if (!attributes.fontSize) {
-                return {}
-              }
-
-              return {
-                style: `font-size: ${attributes.fontSize}`,
-              }
-            },
-          },
-        },
-      },
-    ]
-  },
-
-  addCommands() {
-    return {
-      setFontSize: fontSize => ({ chain }) => {
-        return chain()
-          .setMark('textStyle', { fontSize })
-          .run()
-      },
-    }
-  },
-})
 
 // Custom menu bar component for Tiptap
 const MenuBar = ({ editor }) => {
@@ -340,9 +285,34 @@ const MenuBar = ({ editor }) => {
   const handleImageInsert = useCallback((imageData) => {
     if (!editor || !imageData.src) return;
     
-    editor.chain().focus().setImage({ 
+    // For ResizableImage we need to set width and height explicitly
+    // This ensures our resizing functionality works properly
+    let width = null;
+    let height = null;
+    
+    // If it's a file upload, we can pre-determine dimensions
+    if (imageData.src.startsWith('data:')) {
+      // For base64 images, create a temporary image element to get dimensions
+      const tempImg = new Image();
+      tempImg.src = imageData.src;
+      
+      // Set reasonable default dimensions if the image is too large
+      const maxWidth = 800;
+      if (tempImg.width > maxWidth) {
+        const ratio = tempImg.height / tempImg.width;
+        width = `${maxWidth}px`;
+        height = `${Math.round(maxWidth * ratio)}px`;
+      } else if (tempImg.width > 0) {
+        width = `${tempImg.width}px`;
+        height = `${tempImg.height}px`;
+      }
+    }
+    
+    editor.chain().focus().setResizableImage({ 
       src: imageData.src,
-      alt: imageData.alt 
+      alt: imageData.alt,
+      width,
+      height
     }).run();
   }, [editor]);
 
@@ -425,6 +395,16 @@ const MenuBar = ({ editor }) => {
       editor.chain().focus().setFontSize(size).run();
     }
   }, [editor]);
+  
+  // Add font family handler
+  const handleFontFamilyChange = useCallback((e) => {
+    if (!editor) return;
+    const fontFamily = e.target.value;
+    
+    if (fontFamily) {
+      editor.chain().focus().setFontFamily(fontFamily).run();
+    }
+  }, [editor]);
 
   // Add export handling
   const handleExportClick = (event) => {
@@ -499,6 +479,16 @@ const MenuBar = ({ editor }) => {
   if (!editor) {
     return null;
   }
+
+  // Get the available font families from the extension options
+  const fontFamilies = editor.extensionManager.extensions.find(
+    extension => extension.name === 'fontFamily'
+  )?.options.fontFamilies || [];
+
+  // Get the available font sizes from the extension options
+  const fontSizes = editor.extensionManager.extensions.find(
+    extension => extension.name === 'fontSize'
+  )?.options.fontSizes || [];
 
   return (
     <>
@@ -576,6 +566,32 @@ const MenuBar = ({ editor }) => {
           <option value="0">Normal</option>
         </Box>
         
+        {/* Font Family dropdown */}
+        <Box 
+          component="select" 
+          onChange={handleFontFamilyChange}
+          sx={{ 
+            height: 32, 
+            borderRadius: '4px',
+            border: `1px solid ${theme.palette.divider}`,
+            background: 'transparent',
+            px: 1,
+            ml: 1,
+            fontFamily: theme.typography.fontFamily,
+            '&:focus': { outline: 'none' },
+            minWidth: '120px',
+          }}
+          defaultValue=""
+        >
+          <option value="" disabled>Font Family</option>
+          {fontFamilies.map((font, index) => (
+            <option key={index} value={font.value} style={{ fontFamily: font.value }}>
+              {font.name}
+            </option>
+          ))}
+        </Box>
+        
+        {/* Font Size dropdown */}
         <Box 
           component="select" 
           onChange={handleFontSizeChange}
@@ -588,14 +604,18 @@ const MenuBar = ({ editor }) => {
             ml: 1,
             fontFamily: theme.typography.fontFamily,
             '&:focus': { outline: 'none' },
+            width: '80px',
           }}
           defaultValue=""
         >
           <option value="" disabled>Size</option>
-          <option value="10px">Small</option>
+          {fontSizes.slice(0, 6).map((size, index) => (
+            <option key={index} value={size}>{size}</option>
+          ))}
           <option value="16px">Normal</option>
-          <option value="20px">Large</option>
-          <option value="28px">Huge</option>
+          {fontSizes.slice(-6).map((size, index) => (
+            <option key={index + 7} value={size}>{size}</option>
+          ))}
         </Box>
         
         <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
@@ -638,25 +658,6 @@ const MenuBar = ({ editor }) => {
           title="Code Block"
         >
           <Code fontSize="small" />
-        </IconButton>
-        
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
-        
-        {/* Indentation */}
-        <IconButton 
-          size="small" 
-          onClick={handleOutdent}
-          title="Decrease Indent"
-        >
-          <FormatIndentDecrease fontSize="small" />
-        </IconButton>
-        
-        <IconButton 
-          size="small" 
-          onClick={handleIndent}
-          title="Increase Indent"
-        >
-          <FormatIndentIncrease fontSize="small" />
         </IconButton>
         
         <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
@@ -782,7 +783,7 @@ const MenuBar = ({ editor }) => {
         <IconButton 
           size="small" 
           onClick={openImageModal}
-          title="Insert Image"
+          title="Insert Resizable Image (drag corners to resize)"
         >
           <ImageIcon fontSize="small" />
         </IconButton>
@@ -988,6 +989,8 @@ const getImageUrl = (imageUrl) => {
   return `${process.env.REACT_APP_API_URL}${imageUrl}`;
 };
 
+// Import the dual mode editor component
+
 const ContentTab = ({
   content,
   setContent,
@@ -1023,12 +1026,32 @@ const ContentTab = ({
   const [saveSnackbar, setSaveSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const autosaveIntervalRef = useRef(null);
 
+  // Add state for drag and drop
+  const [isDragging, setIsDragging] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [droppedImage, setDroppedImage] = useState(null);
+  
+  // Add state for image toolbar
+  const [imageToolbarAnchor, setImageToolbarAnchor] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showAltTextInput, setShowAltTextInput] = useState(false);
+  const [editingAltText, setEditingAltText] = useState('');
+  const [fileInputKey, setFileInputKey] = useState(0);
+  const quickReplaceInputRef = useRef(null);
+
+  // Add state for link context menu
+  const [linkMenuPosition, setLinkMenuPosition] = useState({ top: 0, left: 0 });
+  const [showLinkMenu, setShowLinkMenu] = useState(false);
+  const [currentLinkData, setCurrentLinkData] = useState({ href: '', text: '' });
+  const [editingLinkHref, setEditingLinkHref] = useState('');
+
   // Initialize Tiptap editor
   const editor = useEditor({
     extensions: [
       StarterKit,
       Underline,
-      Image.configure({
+      // Replace standard Image with ResizableImage
+      ResizableImage.configure({
         allowBase64: true,
         HTMLAttributes: {
           class: 'blog-content-image',
@@ -1045,7 +1068,8 @@ const ContentTab = ({
       Placeholder.configure({
         placeholder: 'Write your blog content here...',
       }),
-      FontSize,
+      FontSizeExtension,
+      FontFamilyExtension,
       Highlight.configure({
         multicolor: true,
       }),
@@ -1157,6 +1181,259 @@ const ContentTab = ({
       setShowTableMenu(false);
     }
   });
+
+  // Add effect to detect clicks on images in the editor
+  useEffect(() => {
+    const handleImageClick = (e) => {
+      // Check if clicked element is an image or its wrapper
+      let targetElement = e.target;
+      
+      if (targetElement.tagName === 'IMG' || 
+          (targetElement.className && targetElement.className.includes('resizable-image-wrapper'))) {
+        
+        // If we clicked the wrapper, find the image inside
+        if (targetElement.tagName !== 'IMG') {
+          targetElement = targetElement.querySelector('img');
+          if (!targetElement) return;
+        }
+        
+        // Get the node position to set selection
+        if (editor) {
+          // Find the node that corresponds to the image
+          editor.view.state.doc.descendants((node, pos) => {
+            if (node.type.name === 'resizableImage') {
+              // Check if this is our image by comparing its src
+              if (node.attrs.src === targetElement.getAttribute('src')) {
+                // Select the node
+                editor.commands.setNodeSelection(pos);
+                
+                // Set as selected image
+                setSelectedImage({
+                  node,
+                  pos,
+                  element: targetElement
+                });
+                
+                // Set the alt text for editing
+                setEditingAltText(node.attrs.alt || '');
+                
+                // Get position for toolbar
+                const rect = targetElement.getBoundingClientRect();
+                const editorRect = editorRef.current.getBoundingClientRect();
+                
+                // Position toolbar at the top-right of the image
+                setImageToolbarAnchor({
+                  left: rect.right - editorRect.left - 10,
+                  top: rect.top - editorRect.top + 10
+                });
+                
+                // Prevent further propagation
+                e.stopPropagation();
+                return true;
+              }
+            }
+            return false;
+          });
+        }
+      } else if (imageToolbarAnchor && !e.target.closest('.image-toolbar')) {
+        // Close the toolbar if clicking outside, unless clicking toolbar itself
+        setImageToolbarAnchor(null);
+        setShowAltTextInput(false);
+      }
+    };
+    
+    // Add event listener to the editor content
+    const editorElement = editorRef.current?.querySelector('.ProseMirror');
+    if (editorElement) {
+      editorElement.addEventListener('click', handleImageClick);
+      
+      return () => {
+        editorElement.removeEventListener('click', handleImageClick);
+      };
+    }
+  }, [editor, imageToolbarAnchor]);
+  
+  // Handle updating alt text for the selected image
+  const handleUpdateAltText = () => {
+    if (!editor || !selectedImage) return;
+    
+    // Update the alt text attribute of the image
+    editor.chain().focus().updateAttributes('resizableImage', {
+      alt: editingAltText
+    }).run();
+    
+    // Hide the alt text input
+    setShowAltTextInput(false);
+    
+    // Show success message
+    setSaveSnackbar({
+      open: true,
+      message: 'Alt text updated successfully',
+      severity: 'success'
+    });
+  };
+  
+  // Handle replacing the image
+  const handleReplaceImage = (e) => {
+    const file = e.target.files[0];
+    if (!file || !editor || !selectedImage) return;
+    
+    // Check file size
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveSnackbar({
+        open: true,
+        message: 'Image size should be less than 5MB',
+        severity: 'error'
+      });
+      return;
+    }
+    
+    // Read the file as data URL
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Keep the existing alt text and other attributes
+      const existingAttrs = selectedImage.node.attrs;
+      
+      // Update the image source while preserving other attributes
+      editor.chain().focus().updateAttributes('resizableImage', {
+        ...existingAttrs,
+        src: reader.result
+      }).run();
+      
+      // Close the toolbar
+      setImageToolbarAnchor(null);
+      
+      // Show success message
+      setSaveSnackbar({
+        open: true,
+        message: 'Image replaced successfully',
+        severity: 'success'
+      });
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset the file input
+    setFileInputKey(prev => prev + 1);
+  };
+  
+  // Close image toolbar
+  const closeImageToolbar = () => {
+    setImageToolbarAnchor(null);
+    setShowAltTextInput(false);
+  };
+
+  // Handle drag and drop events for the editor
+  useEffect(() => {
+    const handleDrop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      
+      // Process the dropped files
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        
+        // Check if the file is an image
+        if (file.type.startsWith('image/')) {
+          // Size validation (5MB max)
+          if (file.size > 5 * 1024 * 1024) {
+            setSaveSnackbar({
+              open: true,
+              message: 'Image size should be less than 5MB',
+              severity: 'error'
+            });
+            return;
+          }
+          
+          // Set the dropped image and open the modal
+          setDroppedImage(file);
+          setImageModalOpen(true);
+        } else {
+          setSaveSnackbar({
+            open: true,
+            message: 'Only image files are supported for drag and drop',
+            severity: 'warning'
+          });
+        }
+      }
+    };
+    
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    
+    const handleDragEnter = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(true);
+    };
+    
+    const handleDragLeave = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Only set isDragging to false if we're leaving the editor container
+      // not when moving between child elements
+      if (e.currentTarget.contains(e.relatedTarget)) return;
+      setIsDragging(false);
+    };
+    
+    // Add event listeners to the editor container
+    const editorContainer = editorRef.current;
+    if (editorContainer) {
+      editorContainer.addEventListener('drop', handleDrop);
+      editorContainer.addEventListener('dragover', handleDragOver);
+      editorContainer.addEventListener('dragenter', handleDragEnter);
+      editorContainer.addEventListener('dragleave', handleDragLeave);
+      
+      // Cleanup
+      return () => {
+        editorContainer.removeEventListener('drop', handleDrop);
+        editorContainer.removeEventListener('dragover', handleDragOver);
+        editorContainer.removeEventListener('dragenter', handleDragEnter);
+        editorContainer.removeEventListener('dragleave', handleDragLeave);
+      };
+    }
+  }, [editorRef]);
+
+  // Handle image insertion from the modal
+  const handleImageInsert = useCallback((imageData) => {
+    if (!editor || !imageData.src) return;
+    
+    // For ResizableImage we need to set width and height explicitly
+    // This ensures our resizing functionality works properly
+    let width = null;
+    let height = null;
+    
+    // If it's a file upload, we can pre-determine dimensions
+    if (imageData.src.startsWith('data:')) {
+      // For base64 images, create a temporary image element to get dimensions
+      const tempImg = new Image();
+      tempImg.src = imageData.src;
+      
+      // Set reasonable default dimensions if the image is too large
+      const maxWidth = 800;
+      if (tempImg.width > maxWidth) {
+        const ratio = tempImg.height / tempImg.width;
+        width = `${maxWidth}px`;
+        height = `${Math.round(maxWidth * ratio)}px`;
+      } else if (tempImg.width > 0) {
+        width = `${tempImg.width}px`;
+        height = `${tempImg.height}px`;
+      }
+    }
+    
+    editor.chain().focus().setResizableImage({ 
+      src: imageData.src,
+      alt: imageData.alt,
+      width,
+      height
+    }).run();
+    
+    // Reset dropped image
+    setDroppedImage(null);
+  }, [editor]);
 
   // Handle featured image upload
   const handleImageChange = (e) => {
@@ -1938,6 +2215,485 @@ const ContentTab = ({
     );
   };
 
+  // Add this useEffect hook for handling link right-clicks
+  useEffect(() => {
+    const handleLinkRightClick = (e) => {
+      // Look for links in the editor
+      const linkElement = e.target.closest('a');
+      if (linkElement) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Get link data
+        const href = linkElement.getAttribute('href');
+        const text = linkElement.textContent;
+        
+        // Calculate position for the menu
+        const linkRect = linkElement.getBoundingClientRect();
+        const editorRect = editorRef.current?.getBoundingClientRect();
+        
+        if (editorRef.current && linkRect && editorRect) {
+          setLinkMenuPosition({
+            top: linkRect.bottom - editorRect.top + 5,
+            left: linkRect.left - editorRect.left
+          });
+          
+          // Store current link data and set initial value for the edit field
+          setCurrentLinkData({ href, text });
+          setEditingLinkHref(href);
+          
+          // Show the menu
+          setShowLinkMenu(true);
+
+          // Set editor selection to the link
+          if (editor) {
+            editor.commands.focus();
+            editor.view.state.doc.descendants((node, pos) => {
+              if (node.type.name === 'text' && node.marks.some(mark => mark.type.name === 'link')) {
+                const markWithLink = node.marks.find(mark => mark.type.name === 'link');
+                if (markWithLink && markWithLink.attrs.href === href) {
+                  const from = pos;
+                  const to = pos + node.text.length;
+                  editor.commands.setTextSelection({ from, to });
+                  return false;
+                }
+              }
+              return true;
+            });
+          }
+        }
+      } else if (showLinkMenu && !e.target.closest('.link-context-menu')) {
+        // Close menu when clicking outside
+        setShowLinkMenu(false);
+      }
+    };
+    
+    // Add click away listener to close the link menu
+    const handleClickAway = (e) => {
+      if (showLinkMenu && !e.target.closest('.link-context-menu') && !e.target.closest('a')) {
+        setShowLinkMenu(false);
+      }
+    };
+    
+    // Add event listeners to the editor content
+    const editorElement = editorRef.current?.querySelector('.ProseMirror');
+    if (editorElement) {
+      editorElement.addEventListener('contextmenu', handleLinkRightClick);
+      document.addEventListener('click', handleClickAway);
+      
+      return () => {
+        editorElement.removeEventListener('contextmenu', handleLinkRightClick);
+        document.removeEventListener('click', handleClickAway);
+      };
+    }
+  }, [editor, showLinkMenu]);
+  
+  // Add handlers for updating and removing links
+  const handleUpdateLink = () => {
+    if (!editor) return;
+    
+    editor.chain()
+      .focus()
+      .extendMarkRange('link')
+      .setLink({ href: editingLinkHref })
+      .run();
+    
+    setShowLinkMenu(false);
+    
+    // Show success message
+    setSaveSnackbar({
+      open: true,
+      message: 'Link updated successfully',
+      severity: 'success'
+    });
+  };
+  
+  const handleRemoveLink = () => {
+    if (!editor) return;
+    
+    editor.chain()
+      .focus()
+      .extendMarkRange('link')
+      .unsetLink()
+      .run();
+    
+    setShowLinkMenu(false);
+    
+    // Show success message
+    setSaveSnackbar({
+      open: true,
+      message: 'Link removed',
+      severity: 'info'
+    });
+  };
+
+  // Render the rich text editor with all its components
+  const renderRichTextEditor = () => (
+    <Box 
+      ref={editorRef}
+      sx={{
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: '10px',
+        position: 'relative',
+        '& .ProseMirror': {
+          minHeight: '350px',
+          padding: '16px',
+          fontSize: '1rem',
+          '&:focus': {
+            outline: 'none',
+          },
+          '& p': {
+            marginBottom: '0.75em',
+          },
+          '& h1, & h2, & h3, & h4, & h5, & h6': {
+            marginTop: '1em',
+            marginBottom: '0.5em',
+          },
+          '& ul, & ol': {
+            paddingLeft: '1.5em',
+            marginBottom: '0.75em',
+          },
+          '& blockquote': {
+            borderLeft: `4px solid ${theme.palette.divider}`,
+            paddingLeft: '1em',
+            fontStyle: 'italic',
+            margin: '1em 0',
+          },
+          '& img': {
+            maxWidth: '100%',
+            height: 'auto',
+            borderRadius: '4px',
+            cursor: 'pointer', // Make images appear clickable
+          },
+          '& a': {
+            color: theme.palette.primary.main,
+            textDecoration: 'underline',
+          },
+          '& code': {
+            backgroundColor: theme.palette.mode === 'dark' 
+              ? 'rgba(255, 255, 255, 0.1)' 
+              : 'rgba(0, 0, 0, 0.05)',
+            padding: '2px 4px',
+            borderRadius: '4px',
+            fontFamily: 'monospace',
+          },
+          '& pre': {
+            backgroundColor: theme.palette.mode === 'dark' 
+              ? 'rgba(255, 255, 255, 0.1)' 
+              : 'rgba(0, 0, 0, 0.05)',
+            padding: '0.75em',
+            borderRadius: '4px',
+            overflow: 'auto',
+            '& code': {
+              backgroundColor: 'transparent',
+              padding: 0,
+            },
+          },
+          // Table styles
+          '& table': {
+            borderCollapse: 'collapse',
+            marginBottom: '1em',
+            width: '100%',
+            tableLayout: 'fixed',
+            '& td, & th': {
+              border: `1px solid ${theme.palette.divider}`,
+              padding: '0.5em',
+              position: 'relative',
+              verticalAlign: 'top',
+            },
+            '& th': {
+              fontWeight: 'bold',
+              backgroundColor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.05)' 
+                : 'rgba(0, 0, 0, 0.03)',
+            },
+            '& p': {
+              margin: 0,
+            }
+          },
+          // Table resize handle styles
+          '& .tableColumnResizer': {
+            position: 'absolute',
+            right: '-2px',
+            top: 0,
+            bottom: 0,
+            width: '4px',
+            background: 'transparent',
+            cursor: 'col-resize',
+            '&:hover, &.dragging': {
+              background: theme.palette.primary.main,
+            },
+          },
+          // Add specific styles for our resizable images
+          '& .resizable-image-wrapper': {
+            margin: '1em 0',
+            display: 'inline-block',
+            position: 'relative',
+          },
+          '& .resizable-image-wrapper img': {
+            display: 'block',
+            maxWidth: '100%',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          },
+          '& .resizable-image-wrapper.ProseMirror-selectednode': {
+            outline: `2px solid ${theme.palette.primary.main}`,
+          },
+        },
+        // Add styles for drag and drop visual feedback
+        ...(isDragging && {
+          border: `2px dashed ${theme.palette.primary.main}`,
+          backgroundColor: theme.palette.mode === 'dark' 
+            ? 'rgba(144, 202, 249, 0.08)' 
+            : 'rgba(33, 150, 243, 0.08)',
+          '&::after': {
+            content: '"Drop image here"',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            color: theme.palette.text.primary,
+            fontSize: '1.5rem',
+            fontWeight: 500,
+            zIndex: 10,
+            pointerEvents: 'none'
+          }
+        })
+      }}
+    >
+      {editor && <MenuBar editor={editor} />}
+      <EditorContent editor={editor} />
+      
+      {/* Table Menu - Positioned above the selected table */}
+      {showTableMenu && editor && (
+        <Box 
+          sx={{ 
+            position: 'absolute',
+            top: tableMenuPosition.top,
+            left: tableMenuPosition.left,
+            zIndex: 10
+          }}
+        >
+          <TableMenu editor={editor} />
+        </Box>
+      )}
+      
+      {/* Link Context Menu */}
+      {showLinkMenu && editor && (
+        <Box 
+          className="link-context-menu"
+          sx={{ 
+            position: 'absolute',
+            top: linkMenuPosition.top,
+            left: linkMenuPosition.left,
+            zIndex: 30,
+          }}
+        >
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 1.5,
+              borderRadius: '8px',
+              backgroundColor: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`,
+              width: '300px',
+            }}
+          >
+            <Box sx={{ mb: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Edit Link
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                value={editingLinkHref}
+                onChange={(e) => setEditingLinkHref(e.target.value)}
+                placeholder="https://example.com"
+                autoFocus
+                sx={{ mb: 1.5 }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="primary"
+                  startIcon={<LinkIcon />}
+                  onClick={handleUpdateLink}
+                  disabled={!editingLinkHref.trim()}
+                >
+                  Update Link
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Close />}
+                  onClick={handleRemoveLink}
+                >
+                  Remove
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
+      )}
+      
+      {/* Image Toolbar - Appears when an image is clicked */}
+      {imageToolbarAnchor && (
+        <Box 
+          className="image-toolbar"
+          sx={{ 
+            position: 'absolute',
+            top: imageToolbarAnchor.top,
+            left: imageToolbarAnchor.left,
+            zIndex: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+          }}
+        >
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: '4px 8px',
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              backgroundColor: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`
+            }}
+          >
+            {!showAltTextInput ? (
+              <>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button
+                    size="small"
+                    startIcon={<EditIcon fontSize="small" />}
+                    onClick={() => setShowAltTextInput(true)}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Edit Alt
+                  </Button>
+                  
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    ref={quickReplaceInputRef}
+                    onChange={handleReplaceImage}
+                    key={fileInputKey}
+                  />
+                  <Button
+                    size="small"
+                    startIcon={<ChangeCircleIcon fontSize="small" />}
+                    onClick={() => quickReplaceInputRef.current.click()}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Replace
+                  </Button>
+                  
+                  <IconButton 
+                    size="small" 
+                    onClick={closeImageToolbar}
+                    sx={{ p: 0.5 }}
+                  >
+                    <Close fontSize="small" />
+                  </IconButton>
+                </Box>
+              </>
+            ) : (
+              <>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '250px' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="caption" fontWeight={500}>
+                      Edit Alt Text
+                    </Typography>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setShowAltTextInput(false)}
+                      sx={{ p: 0.5 }}
+                    >
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </Box>
+                  
+                  <TextField
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    value={editingAltText}
+                    onChange={(e) => setEditingAltText(e.target.value)}
+                    placeholder="Describe this image"
+                    autoFocus
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <AccessibilityNew fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{ mb: 1 }}
+                  />
+                  
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={!editingAltText.trim()}
+                    onClick={handleUpdateAltText}
+                    sx={{ alignSelf: 'flex-end', textTransform: 'none' }}
+                  >
+                    Save Alt Text
+                  </Button>
+                </Box>
+              </>
+            )}
+          </Paper>
+        </Box>
+      )}
+    </Box>
+  );
+
+  // Define the editor custom actions
+  const editorCustomActions = (
+    <Box sx={{ display: 'flex', gap: 1 }}>
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<TocOutlined />}
+        onClick={handleOpenTocDialog}
+        sx={{ textTransform: 'none' }}
+      >
+        Table of Contents
+      </Button>
+      
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<AccessAlarmsOutlined />}
+        onClick={handleCheckAccessibility}
+        sx={{ textTransform: 'none' }}
+      >
+        Accessibility
+      </Button>
+      
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<Save />}
+        onClick={saveContent}
+        sx={{ textTransform: 'none' }}
+      >
+        Save
+      </Button>
+    </Box>
+  );
+
   return (
     <Box>
       <Typography 
@@ -1978,127 +2734,19 @@ const ContentTab = ({
         </Box>
       </Box>
       
-      {/* Tiptap Editor */}
-      <Box 
-        ref={editorRef}
-        sx={{
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: '10px',
-          mb: 4,
-          position: 'relative',
-          '& .ProseMirror': {
-            minHeight: '350px',
-            padding: '16px',
-            fontSize: '1rem',
-            '&:focus': {
-              outline: 'none',
-            },
-            '& p': {
-              marginBottom: '0.75em',
-            },
-            '& h1, & h2, & h3, & h4, & h5, & h6': {
-              marginTop: '1em',
-              marginBottom: '0.5em',
-            },
-            '& ul, & ol': {
-              paddingLeft: '1.5em',
-              marginBottom: '0.75em',
-            },
-            '& blockquote': {
-              borderLeft: `4px solid ${theme.palette.divider}`,
-              paddingLeft: '1em',
-              fontStyle: 'italic',
-              margin: '1em 0',
-            },
-            '& img': {
-              maxWidth: '100%',
-              height: 'auto',
-              borderRadius: '4px',
-            },
-            '& a': {
-              color: theme.palette.primary.main,
-              textDecoration: 'underline',
-            },
-            '& code': {
-              backgroundColor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.1)' 
-                : 'rgba(0, 0, 0, 0.05)',
-              padding: '2px 4px',
-              borderRadius: '4px',
-              fontFamily: 'monospace',
-            },
-            '& pre': {
-              backgroundColor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.1)' 
-                : 'rgba(0, 0, 0, 0.05)',
-              padding: '0.75em',
-              borderRadius: '4px',
-              overflow: 'auto',
-              '& code': {
-                backgroundColor: 'transparent',
-                padding: 0,
-              },
-            },
-            // Table styles
-            '& table': {
-              borderCollapse: 'collapse',
-              marginBottom: '1em',
-              width: '100%',
-              tableLayout: 'fixed',
-              '& td, & th': {
-                border: `1px solid ${theme.palette.divider}`,
-                padding: '0.5em',
-                position: 'relative',
-                verticalAlign: 'top',
-              },
-              '& th': {
-                fontWeight: 'bold',
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.05)' 
-                  : 'rgba(0, 0, 0, 0.03)',
-              },
-              '& p': {
-                margin: 0,
-              }
-            },
-            // Table resize handle styles
-            '& .tableColumnResizer': {
-              position: 'absolute',
-              right: '-2px',
-              top: 0,
-              bottom: 0,
-              width: '4px',
-              background: 'transparent',
-              cursor: 'col-resize',
-              '&:hover, &.dragging': {
-                background: theme.palette.primary.main,
-              },
-            },
-          },
-        }}
-      >
-        {editor && <MenuBar editor={editor} />}
-        <EditorContent editor={editor} />
-        
-        {/* Table Menu - Positioned above the selected table */}
-        {showTableMenu && editor && (
-          <Box 
-            sx={{ 
-              position: 'absolute',
-              top: tableMenuPosition.top,
-              left: tableMenuPosition.left,
-              zIndex: 10
-            }}
-          >
-            <TableMenu editor={editor} />
-          </Box>
-        )}
-      </Box>
+      {/* Dual Mode Editor (Rich Text + HTML) */}
+      <DualModeEditor
+        richTextEditor={renderRichTextEditor()}
+        content={content}
+        onContentChange={setContent}
+        customActions={editorCustomActions}
+      />
 
       <Typography 
         variant="subtitle1" 
         sx={{ 
           mb: 2,
+          mt: 4,
           fontWeight: 600,
           color: theme.palette.text.primary,
           display: 'flex',
@@ -2245,39 +2893,18 @@ const ContentTab = ({
         }}
       />
 
-    
+      {/* Image Modal for dropped images */}
+      <ImageModal 
+        open={imageModalOpen} 
+        onClose={() => {
+          setImageModalOpen(false);
+          setDroppedImage(null);
+        }}
+        onInsert={handleImageInsert}
+        initialFile={droppedImage}
+      />
+
       <TableOfContentsDialog />
-
-      {/* Add the accessibility button somewhere visible in the UI */}
-      <Box sx={{ mt: 2, mb: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-        <Button
-          variant="outlined"
-          startIcon={<TocOutlined />}
-          onClick={handleOpenTocDialog}
-          sx={{ textTransform: 'none' }}
-        >
-          Generate Table of Contents
-        </Button>
-        
-        <Button
-          variant="outlined"
-          startIcon={<AccessAlarmsOutlined />}
-          onClick={handleCheckAccessibility}
-          sx={{ textTransform: 'none' }}
-        >
-          Check Accessibility
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<Save />}
-          onClick={saveContent}
-          sx={{ textTransform: 'none' }}
-        >
-          Save Content
-        </Button>
-      </Box>
-      <AccessibilityDialog />
-
       {/* Autosave Snackbar */}
       <Snackbar 
         open={saveSnackbar.open}

@@ -29,8 +29,6 @@ import {
   Tooltip
 } from '@mui/material';
 import { PhotoCamera, Close, ArrowBack, Article, Description, LocalOffer, Category, Search, Share, Settings, CheckCircle, Warning, Analytics, ChevronLeft, ChevronRight } from '@mui/icons-material';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import API from '../../BackendAPi/ApiProvider';
 
 // Import tab components
@@ -643,34 +641,6 @@ const CreateBlog = () => {
     }
   };
 
-  const modules = {
-    toolbar: [
-      [{ header: [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ list: 'ordered' }, { list: 'bullet' }],
-      ['link', 'image', 'video'], // Add image, video, and link options
-      [{ align: [] }],
-      [{ color: [] }, { background: [] }],
-      ['clean'],
-    ],
-  };
-
-  const formats = [
-    'header',
-    'bold',
-    'italic',
-    'underline',
-    'strike',
-    'list',
-    'bullet',
-    'link',
-    'image',
-    'video',
-    'align',
-    'color',
-    'background',
-  ];
-  
   if (initialLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="70vh">

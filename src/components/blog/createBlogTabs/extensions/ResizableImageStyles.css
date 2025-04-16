@@ -1,0 +1,66 @@
+/* Styles for resizable image container */
+.resizable-image-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: 1em 0;
+  box-sizing: border-box;
+}
+
+.resizable-image-wrapper img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Resize handle styles */
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: #0d6efd;
+  border: 1px solid white;
+  border-radius: 50%;
+  z-index: 100;
+}
+
+/* Cursor styles for different resize handles */
+.resize-handle-nw {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+
+.resize-handle-ne {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+
+.resize-handle-sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+
+.resize-handle-se {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+/* Only show resize handles when image wrapper is hovered or selected */
+.resizable-image-wrapper .resize-handle {
+  display: none;
+}
+
+.resizable-image-wrapper:hover .resize-handle,
+.resizable-image-wrapper.ProseMirror-selectednode .resize-handle {
+  display: block;
+}
+
+/* Additional focus styling when selected */
+.resizable-image-wrapper.ProseMirror-selectednode {
+  outline: 2px solid #0d6efd;
+  border-radius: 2px;
+} 

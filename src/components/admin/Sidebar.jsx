@@ -19,19 +19,20 @@ import {
   Chat as ChatIcon,
   Support as SupportIcon,
   Settings as SettingsIcon,
+  Subscriptions as SubscriptionsIcon,
 } from '@mui/icons-material';
 import { Link, useLocation } from 'react-router-dom';
 
 const menuItems = [
   { text: 'Overview', icon: DashboardIcon, path: '/' },
   { text: 'Users', icon: PeopleIcon, path: '/users' },
+  { text: 'Subscription Plans', icon: SubscriptionsIcon, path: '/subscription-plans' },
   { text: 'Blogs', icon: ArticleIcon, path: '/blog/manage' },
   { text: 'Job Applications', icon: WorkIcon, path: '/jobs' },
   { text: 'Newsletter', icon: MailIcon, path: '/newsletter' },
   { text: 'Live Chat', icon: ChatIcon, path: '/chat' },
   { text: 'Support Tickets', icon: SupportIcon, path: '/support' },
   { text: 'Consultation Request', icon: SupportIcon, path: '/consultation' },
-
 ];
 
 const Sidebar = () => {

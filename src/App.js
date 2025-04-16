@@ -13,6 +13,7 @@ import AdminNewsletter from './components/admin/Newsletter';
 import ChatDashboard from './components/admin/ChatDashboard';
 import AdminSupport from './components/admin/Support';
 import ManageConsultation from './components/admin/ManageConsultation';
+import SubscriptionPlans from './components/admin/SubscriptionPlans';
 import CreateBlog from './components/blog/CreateBlog';
 import ManageBlog from './components/blog/ManageBlog';
 import UserProfile from './components/profile/UserProfile';
@@ -34,6 +35,7 @@ const App = () => {
             >
               <Route index element={<AdminOverview />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="subscription-plans" element={<SubscriptionPlans />} />
               <Route path="blogs" element={<AdminBlogs />} />
               <Route path="jobs" element={<AdminJobs />} />
               <Route path="newsletter" element={<AdminNewsletter />} />
